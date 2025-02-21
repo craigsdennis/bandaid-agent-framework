@@ -1,0 +1,96 @@
+body {
+  background-color: #f3f4f6;
+  color: #111827;
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.min-h-screen {
+  min-height: 100vh;
+  padding-bottom: 6rem;
+}
+
+.chat-container {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.message {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  word-break: break-word;
+}
+
+.user-message {
+  background-color: #dbeafe;
+  margin-left: auto;
+  max-width: 80%;
+}
+
+.agent-message {
+  background-color: #e5e7eb;
+  margin-right: auto;
+  max-width: 80%;
+}
+
+.input-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: white;
+  padding: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.input-wrapper {
+  max-width: 42rem;
+  margin: 0 auto;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.chat-input:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.send-button {
+  padding: 0.5rem 1rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.send-button:hover {
+  background-color: #2563eb;
+}
+
+.send-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.send-button:disabled {
+  background-color: #93c5fd;
+  cursor: not-allowed;
+}
