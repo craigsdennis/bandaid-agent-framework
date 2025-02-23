@@ -3,35 +3,55 @@
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "agent-framework-bandaid",
-	"main": "src/server.ts",
-	"compatibility_date": "2025-02-04",
-	"compatibility_flags": [
-		"nodejs_compat"
-	],
-	"assets": {
-		"directory": "public"
-	},
-	"durable_objects": {
-		"bindings": [
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "agent-framework-bandaid",
+  "main": "src/server.ts",
+  "compatibility_date": "2025-02-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "public"
+  },
+  "browser": {"binding": "BROWSER"},
+  "workflows": [{"binding": "SPOTIFY_RESEARCHER", "class_name": "SpotifyResearcher", "name": "SpotifyResearcher"}],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "Orchestrator",
+        "class_name": "Orchestrator"
+      },
+      {
+        "name": "PosterAgent",
+        "class_name": "PosterAgent"
+      },
+      {
+        "name": "SpotifyUserAgent",
+        "class_name": "SpotifyUserAgent"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["Orchestrator", "PosterAgent", "SpotifyUserAgent"]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "r2_buckets": [
+    {
+      "bucket_name": "band-aid",
+      "binding": "BAND_AID"
+    }
+  ],
+  "queues": {
+		"consumers": [
 			{
-				"name": "MyAgent",
-				"class_name": "MyAgent"
+				"queue": "uploaded-band-poster"
 			}
 		]
-	},
-	"migrations": [
-		{
-			"tag": "v1",
-			"new_sqlite_classes": [
-				"MyAgent"
-			]
-		}
-	],
-	"observability": {
-		"enabled": true
 	}
+
   /**
    * Smart Placement
    * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

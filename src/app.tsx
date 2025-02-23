@@ -1,68 +1,60 @@
 import { useAgent } from "@cloudflare/agents/react";
 import { useState } from "react";
 
-interface Message {
-  text: string;
-  isUser: boolean;
+// interface Message {
+//   text: string;
+//   isUser: boolean;
+// }
+
+interface Poster {
+  imageUrl: string;
+  slug: string;
 }
 
 export default function App() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
+  const [result, setResult] = useState<string>("");
+  const [posters, setPosters] = useState<Poster[]>([]);
+  
   const agent = useAgent({
-    agent: "my-agent",
-    onMessage: (message) => {
-      setMessages((prev) => [
-        ...prev,
-        { text: message.data as string, isUser: false },
-      ]);
-      setIsLoading(false);
+    agent: "orchestrator",
+    name: "main",
+    onOpen(event) {
+      console.log("Agent opening");
     },
+    onMessage: (message) => {
+      console.log("Message received");
+      setResult(message.data);
+    },
+    onStateUpdate: (state: {posters: Poster[]}, source) => {
+      console.log("State updated");
+      setPosters(state.posters);
+    }
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const debugOrchestratorState = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage = input.trim();
-    setMessages((prev) => [...prev, { text: userMessage, isUser: true }]);
-    setInput("");
-    setIsLoading(true);
-    agent.send(userMessage);
-  };
+    agent.send("state.debug");
+  }
+  const deleteAllPosters = (e: React.FormEvent) => {
+    e.preventDefault();
+    agent.send("delete.posters");
+  }
 
   return (
-    <div className="min-h-screen">
-      <div className="chat-container">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`message ${
-              message.isUser ? "user-message" : "agent-message"
-            }`}
-          >
-            {message.text}
+    <div>
+      <h1>Look at the console, nerd 🤓</h1>
+      {posters.map((poster) => (
+        <div 
+          key={poster.slug}
+          ><img src={poster.imageUrl} />
           </div>
-        ))}
-        {isLoading && <div className="message agent-message">Thinking...</div>}
+      ))}
+      <div>
+        Latest message: <code>{result}</code>
       </div>
-
-      <form onSubmit={handleSubmit} className="input-container">
-        <div className="input-wrapper">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your message..."
-            className="chat-input"
-            disabled={isLoading}
-          />
-          <button type="submit" className="send-button" disabled={isLoading}>
-            Send
-          </button>
-        </div>
+      <form>
+        <button onClick={debugOrchestratorState}>Debug Orchestrator State</button>
+        <button onClick={deleteAllPosters}>Delete All Posters</button>
       </form>
     </div>
   );
