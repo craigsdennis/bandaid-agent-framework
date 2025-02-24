@@ -15,6 +15,13 @@ import { SpotifyResearcher } from "./workflows/spotify-researcher";
 
 export { Orchestrator, PosterAgent, SpotifyUserAgent, SpotifyResearcher };
 
+type QueueMessage = {
+  action: string;
+  object: {
+    key: string;
+  };
+};
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     return (
@@ -22,10 +29,7 @@ export default {
       new Response("Not found", { status: 404 })
     );
   },
-  async queue(
-    batch: MessageBatch<{ action: string; object: { key: string } }>,
-    env: Env
-  ) {
+  async queue(batch: MessageBatch<QueueMessage>, env: Env) {
     for (const msg of batch.messages) {
       const payload = msg.body;
       const key: string = payload.object.key as string;
@@ -42,4 +46,4 @@ export default {
       msg.ack();
     }
   },
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<Env, QueueMessage>;
