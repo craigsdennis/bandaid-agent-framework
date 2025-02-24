@@ -1,4 +1,9 @@
-import { Agent, type Connection, type ConnectionContext, type WSMessage } from "@cloudflare/agents";
+import {
+  Agent,
+  type Connection,
+  type ConnectionContext,
+  type WSMessage,
+} from "@cloudflare/agents";
 import type { PosterState } from "./poster";
 
 export type PosterSummary = {
@@ -21,42 +26,53 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
         );`;
   }
 
-  onStateUpdate(state: OrchestratorState | undefined, source: Connection | "server"): void {
-      console.log("Orchestrator state updated");
-      this.broadcast("State updated (using broadcast)");
+  onStateUpdate(
+    state: OrchestratorState | undefined,
+    source: Connection | "server"
+  ): void {
+    console.log("Orchestrator state updated");
+    this.broadcast("State updated (using broadcast)");
   }
 
   async onMessage(connection: Connection, message: WSMessage): Promise<void> {
-      console.log(message);
-      if (message === "state.debug") {
-        const results = this.sql`SELECT count(*) as total FROM poster_submissions;`
-        connection.send(JSON.stringify({
-            event: "state.debug.response",
-            posterCount: results[0].total,
-            state: this.state
-        }));
+    console.log(message);
+    if (message === "state.debug") {
+      const results = this
+        .sql`SELECT count(*) as total FROM poster_submissions;`;
+      connection.send(
+        JSON.stringify({
+          event: "state.debug.response",
+          posterCount: results[0].total,
+          state: this.state,
+        })
+      );
+    }
+    if (message === "delete.posters") {
+      const rows = this.sql<{ id: string }>`SELECT id from poster_submissions;`;
+      console.log(`There are ${rows.length} posters to delete`);
+      for (const row of rows) {
+        console.log(`Getting ${row.id}`);
+        const id = this.env.PosterAgent.idFromString(row.id);
+        const posterAgent = this.env.PosterAgent.get(id);
+        console.log(`Deleting ${await posterAgent.getSlug()}`);
+        await posterAgent.destroy();
       }
-      if (message === "delete.posters") {
-        const rows = this.sql<{id: string}>`SELECT id from poster_submissions;`;
-        console.log(`There are ${rows.length} posters to delete`);
-        for (const row of rows) {
-            console.log(`Getting ${row.id}`);
-            const id = this.env.PosterAgent.idFromString(row.id);
-            const posterAgent = this.env.PosterAgent.get(id);
-            console.log(`Deleting ${await posterAgent.getSlug()}`);
-            await posterAgent.destroy();
-        }
-        this.sql`DELETE FROM poster_submissions;`
-        this.setState({...this.state, posters: []});
-        connection.send(JSON.stringify({
-            event: "delete.posters",
-            success: true
-        }));
-      }
+      this.sql`DELETE FROM poster_submissions;`;
+      this.setState({ ...this.state, posters: [] });
+      connection.send(
+        JSON.stringify({
+          event: "delete.posters",
+          success: true,
+        })
+      );
+    }
   }
 
-  onConnect(connection: Connection, ctx: ConnectionContext): void | Promise<void> {
-      connection.send("Hey there, I'm the orchestrator");
+  onConnect(
+    connection: Connection,
+    ctx: ConnectionContext
+  ): void | Promise<void> {
+    connection.send("Hey there, I'm the orchestrator");
   }
 
   async getPosterIdFromSlug(slug: string): Promise<string> {
@@ -84,10 +100,9 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
     const posterAgent = this.env.PosterAgent.get(id);
     await posterAgent.initialize(url);
     // Update poster record to the generated slug
-    const slug = await posterAgent.getSlug() as string;
-    this.sql`UPDATE poster_submissions SET slug=${
-      slug
-    } WHERE id=${id.toString()}`;
+    const slug = (await posterAgent.getSlug()) as string;
+    this
+      .sql`UPDATE poster_submissions SET slug=${slug} WHERE id=${id.toString()}`;
     const state = this.state || { posters: [] };
     state.posters.push({
       slug,

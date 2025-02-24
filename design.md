@@ -1,14 +1,16 @@
 # Orchestrator
 
 (singleton?)
+
 - [x] spawns poster agents from url
 - [x] returns all posters
 - [ ] creates playlist for poster specific Spotify User
 - [ ] periodically checks in with Spotify User
-- [ ] emails about upcoming shows 
+- [ ] emails about upcoming shows
 - [ ] buys tickets for show
 
 # Workflow - Spotify Researcher
+
 - [x] gathers spotify information about known artists
 - [x] adds tracks to poster for sampling
 
@@ -21,6 +23,7 @@
 # SpotifyUserAgent
 
 (handles token refreshing / oauth2)
+
 - [ ] creates playlist from Poster tracks
 - [ ] tracks listens to playlisted tracks
 - [ ] produces listening vibe?

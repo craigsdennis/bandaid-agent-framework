@@ -11,8 +11,14 @@
   "assets": {
     "directory": "public"
   },
-  "browser": {"binding": "BROWSER"},
-  "workflows": [{"binding": "SPOTIFY_RESEARCHER", "class_name": "SpotifyResearcher", "name": "SpotifyResearcher"}],
+  "browser": { "binding": "BROWSER" },
+  "workflows": [
+    {
+      "binding": "SPOTIFY_RESEARCHER",
+      "class_name": "SpotifyResearcher",
+      "name": "SpotifyResearcher"
+    }
+  ],
   "durable_objects": {
     "bindings": [
       {
@@ -45,12 +51,12 @@
     }
   ],
   "queues": {
-		"consumers": [
-			{
-				"queue": "uploaded-band-poster"
-			}
-		]
-	}
+    "consumers": [
+      {
+        "queue": "uploaded-band-poster"
+      }
+    ]
+  }
 
   /**
    * Smart Placement

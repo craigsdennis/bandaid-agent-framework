@@ -70,21 +70,23 @@ export class SpotifyResearcher extends WorkflowEntrypoint<
               await page.goto(summary.spotify_url);
               await page.waitForNetworkIdle();
               // Dynamic class names find the last text after <h2>About</h2>
-              const handles = await page.$$('h2');
+              const handles = await page.$$("h2");
               let description;
               for (const handle of handles) {
-                  const headingText = await handle.evaluate((el) => el.innerText);
-                  if (headingText !== "About") {
-                      console.log(`Skipping heading: ${headingText}`);
-                      continue;
-                  }
-                  description = await handle.evaluate((el) => {
-                      //@ts-ignore
-                      const els = el.parentElement.querySelectorAll(`[data-encore-id="text"]`);
-                      //@ts-ignore
-                      return Array.from(els).at(-1).innerText;
-                  });
-                  break;
+                const headingText = await handle.evaluate((el) => el.innerText);
+                if (headingText !== "About") {
+                  console.log(`Skipping heading: ${headingText}`);
+                  continue;
+                }
+                description = await handle.evaluate((el) => {
+                  //@ts-ignore
+                  const els = el.parentElement.querySelectorAll(
+                    `[data-encore-id="text"]`
+                  );
+                  //@ts-ignore
+                  return Array.from(els).at(-1).innerText;
+                });
+                break;
               }
               await page.close();
               return description;
