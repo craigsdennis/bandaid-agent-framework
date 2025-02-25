@@ -7,6 +7,7 @@ import { useState } from "react";
 // }
 
 interface Poster {
+  id: string;
   imageUrl: string;
   slug: string;
 }
@@ -42,10 +43,13 @@ export default function App() {
 
   return (
     <div>
-      <h1>Look at the console, nerd 🤓</h1>
+      <h1>BandAid</h1>
+      <p>Don't forget to check out the console, nerd 🤓</p>
       {posters.map((poster) => (
         <div key={poster.slug}>
+          <a href={`/posters/${poster.id}`}>
           <img src={poster.imageUrl} />
+          </a>
         </div>
       ))}
       <div>

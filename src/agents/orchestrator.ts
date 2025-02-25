@@ -1,5 +1,6 @@
 import {
   Agent,
+  getAgentByName,
   type Connection,
   type ConnectionContext,
   type WSMessage,
@@ -7,6 +8,7 @@ import {
 import type { PosterState } from "./poster";
 
 export type PosterSummary = {
+  id: string,
   slug: string;
   imageUrl: string;
 };
@@ -52,8 +54,7 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
       console.log(`There are ${rows.length} posters to delete`);
       for (const row of rows) {
         console.log(`Getting ${row.id}`);
-        const id = this.env.PosterAgent.idFromString(row.id);
-        const posterAgent = this.env.PosterAgent.get(id);
+        const posterAgent = await getAgentByName(this.env.PosterAgent, row.id);
         console.log(`Deleting ${await posterAgent.getSlug()}`);
         await posterAgent.destroy();
       }
@@ -94,17 +95,18 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
 
   async submitPoster(url: string) {
     // INSERT submission
-    const id = this.env.PosterAgent.newUniqueId();
+    const id = crypto.randomUUID();
+    const posterAgent = await getAgentByName(this.env.PosterAgent, id);
     this
-      .sql<string>`INSERT INTO poster_submissions (id, url) VALUES (${id.toString()}, ${url})`;
-    const posterAgent = this.env.PosterAgent.get(id);
+      .sql<string>`INSERT INTO poster_submissions (id, url) VALUES (${id}, ${url})`;
     await posterAgent.initialize(url);
     // Update poster record to the generated slug
     const slug = (await posterAgent.getSlug()) as string;
     this
-      .sql`UPDATE poster_submissions SET slug=${slug} WHERE id=${id.toString()}`;
+      .sql`UPDATE poster_submissions SET slug=${slug} WHERE id=${id}`;
     const state = this.state || { posters: [] };
     state.posters.push({
+      id,
       slug,
       imageUrl: (await posterAgent.getPublicPosterUrl()) as string,
     });
@@ -112,7 +114,7 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
     console.log("Kicking off Researcher");
     await this.env.SPOTIFY_RESEARCHER.create({
       params: {
-        posterIdString: id.toString(),
+        posterAgentName: id.toString(),
       },
     });
     return true;

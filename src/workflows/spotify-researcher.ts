@@ -7,9 +7,10 @@ import {
 } from "cloudflare:workers";
 import puppeteer from "@cloudflare/puppeteer";
 import type { SpotifyArtistSummary } from "../agents/poster";
+import { getAgentByName } from "@cloudflare/agents";
 
 export type ResearcherParams = {
-  posterIdString: string;
+  posterAgentName: string;
 };
 
 export class SpotifyResearcher extends WorkflowEntrypoint<
@@ -21,8 +22,7 @@ export class SpotifyResearcher extends WorkflowEntrypoint<
     step: WorkflowStep
   ): Promise<string> {
     const browser = await puppeteer.launch(this.env.BROWSER);
-    const id = this.env.PosterAgent.idFromString(event.payload.posterIdString);
-    const posterAgent = this.env.PosterAgent.get(id);
+    const posterAgent = await getAgentByName(this.env.PosterAgent, event.payload.posterAgentName);
     const spotifyApi = SpotifyApi.withClientCredentials(
       this.env.SPOTIFY_CLIENT_ID,
       this.env.SPOTIFY_CLIENT_SECRET

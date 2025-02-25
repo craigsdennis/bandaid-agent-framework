@@ -9,7 +9,8 @@ const root = createRoot(document.getElementById("app")!);
 
 // Replace with the routing system of your choice!
 if (url.pathname.startsWith("/posters")) {
-    root.render(<Poster/>);
+    const id = url.pathname.split("/").at(-1);
+    root.render(<Poster id={id}/>);
 } else {
     root.render(<App />);
 }

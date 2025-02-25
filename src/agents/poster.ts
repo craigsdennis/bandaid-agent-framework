@@ -124,8 +124,7 @@ export class PosterAgent extends Agent<Env, PosterState> {
   addSpotifyArtistSummary(summary: SpotifyArtistSummary) {
     const summaries = this.state?.spotifyArtistSummaries || [];
     summaries.push(summary);
-    // @ts-ignore TODO: hmmm initialize to empty?
-    this.state.spotifyArtistSummaries = summaries;
+    this.setState({...this.state as PosterState, spotifyArtistSummaries: summaries});
   }
 
   getPublicPosterUrl(): string | undefined {
