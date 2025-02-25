@@ -14,6 +14,7 @@ import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import { agentsMiddleware } from "hono-agents";
 
+
 import type { AccessToken, UserProfile } from "@spotify/web-api-ts-sdk";
 
 export { Orchestrator, PosterAgent, SpotifyUserAgent, SpotifyResearcher };
@@ -81,6 +82,12 @@ app.notFound((c) => {
 	// We have a single page app
 	return c.env.ASSETS.fetch(c.req.raw);
 });
+type QueueMessage = {
+  action: string;
+  object: {
+    key: string;
+  };
+};
 
 export default {
   fetch: app.fetch,
@@ -105,4 +112,5 @@ export default {
       msg.ack();
     }
   },
-} satisfies ExportedHandler<Env>;
+
+} satisfies ExportedHandler<Env, QueueMessage>;
