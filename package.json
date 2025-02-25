@@ -30,10 +30,12 @@
   "dependencies": {
     "@ai-sdk/openai": "^1.1.13",
     "@ai-sdk/react": "^1.1.17",
-    "@cloudflare/agents": "^0.0.6",
+    "@cloudflare/agents": "^0.0.13",
     "@cloudflare/puppeteer": "^0.0.14",
     "@spotify/web-api-ts-sdk": "^1.2.0",
     "ai": "^4.1.45",
+    "hono": "^4.7.2",
+    "hono-agents": "^0.0.1",
     "openai": "^4.85.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

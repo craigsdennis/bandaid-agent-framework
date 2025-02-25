@@ -17,18 +17,18 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );`
         this.sql`CREATE TABLE IF NOT EXISTS watched_tracks (
-            id INTEGER AUTOINCREMENT PRIMARY KEY,
+            id INTEGER AUTO INCREMENT PRIMARY KEY,
             uri VARCHAR(255) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );`
 
         this.sql`CREATE TABLE IF NOT EXISTS tokens (
-            id INTEGER AUTOINCREMENT PRIMARY KEY,
+            id INTEGER AUTO INCREMENT PRIMARY KEY,
             token_json TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );`;
         this.sql`CREATE TABLE IF NOT EXISTS recently_played_check_log (
-            id INTEGER AUTOINCREMENT PRIMARY KEY,
+            id INTEGER AUTO INCREMENT PRIMARY KEY,
             total_recent INTEGER,
             total_matches_found INTEGER,
             total_watched_at_time_of_check INTEGER,
@@ -151,13 +151,6 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
         (total_recent, total_matches_found, total_watched_at_time_of_check) 
         VALUES (${recentTrackUris.length}, ${matchedUris.length}, ${watchedTrackUris.length});`
 
-        /**
-         * recently_played_check_log (
-            id INTEGER AUTOINCREMENT PRIMARY KEY,
-            total_recent INTEGER,
-            total_matches_found INTEGER,
-            total_watched_at_time_of_check INTEGER,
-         */
 		return matchedUris;
 	}
     async getWatchedTrackUris(): Promise<string[]> {
