@@ -121,6 +121,15 @@ export class PosterAgent extends Agent<Env, PosterState> {
     return this.state?.bandNames;
   }
 
+  async getTourName() {
+    return this.state?.tourName;
+  }
+
+  async getTrackUris(): Promise<string[]> {
+    const summaries = this.state?.spotifyArtistSummaries as SpotifyArtistSummary[];
+    return summaries?.flatMap((summary) => summary.topTracksUris as string[]); 
+  }
+
   addSpotifyArtistSummary(summary: SpotifyArtistSummary) {
     const summaries = this.state?.spotifyArtistSummaries || [];
     summaries.push(summary);

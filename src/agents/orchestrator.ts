@@ -8,7 +8,7 @@ import {
 import type { PosterState } from "./poster";
 
 export type PosterSummary = {
-  id: string,
+  id: string;
   slug: string;
   imageUrl: string;
 };
@@ -26,6 +26,13 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
             slug TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );`;
+    this.sql`CREATE TABLE IF NOT EXISTS poster_playlists (
+            id TEXT PRIMARY KEY,
+            playlist_id TEXT NOT NULL,
+            poster_id TEXT NOT NULL,
+            spotify_user_id TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );`;
   }
 
   onStateUpdate(
@@ -38,34 +45,56 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
 
   async onMessage(connection: Connection, message: WSMessage): Promise<void> {
     console.log(message);
-    if (message === "state.debug") {
-      const results = this
-        .sql`SELECT count(*) as total FROM poster_submissions;`;
-      connection.send(
-        JSON.stringify({
-          event: "state.debug.response",
-          posterCount: results[0].total,
-          state: this.state,
-        })
-      );
-    }
-    if (message === "delete.posters") {
-      const rows = this.sql<{ id: string }>`SELECT id from poster_submissions;`;
-      console.log(`There are ${rows.length} posters to delete`);
-      for (const row of rows) {
-        console.log(`Getting ${row.id}`);
-        const posterAgent = await getAgentByName(this.env.PosterAgent, row.id);
-        console.log(`Deleting ${await posterAgent.getSlug()}`);
-        await posterAgent.destroy();
-      }
-      this.sql`DELETE FROM poster_submissions;`;
-      this.setState({ ...this.state, posters: [] });
-      connection.send(
-        JSON.stringify({
-          event: "delete.posters",
-          success: true,
-        })
-      );
+    const payload = JSON.parse(message.toString());
+    switch (payload.event) {
+      case "state.debug":
+        const results = this
+          .sql`SELECT count(*) as total FROM poster_submissions;`;
+        connection.send(
+          JSON.stringify({
+            event: "state.debug.response",
+            posterCount: results[0].total,
+            state: this.state,
+          })
+        );
+        break;
+      case "delete.posters.all":
+        const rows = this.sql<{
+          id: string;
+        }>`SELECT id from poster_submissions;`;
+        console.log(`There are ${rows.length} posters to delete`);
+        for (const row of rows) {
+          console.log(`Getting ${row.id}`);
+          const posterAgent = await getAgentByName(
+            this.env.PosterAgent,
+            row.id
+          );
+          console.log(`Deleting ${await posterAgent.getSlug()}`);
+          await posterAgent.destroy();
+        }
+        this.sql`DELETE FROM poster_submissions;`;
+        this.setState({ ...this.state, posters: [] });
+        connection.send(
+          JSON.stringify({
+            event: "delete.posters",
+            success: true,
+          })
+        );
+        break;
+      case "poster.playlist.create":
+        const playlistId = await this.createPlaylistForSpotifyUser(payload.posterId, payload.spotifyUserId);
+        connection.send(JSON.stringify({
+          event: "poster.playlist.created",
+          playlistId
+        }))
+        break;
+      default:
+        connection.send(
+          JSON.stringify({
+            event: "unhandled",
+            eventName: payload.event,
+          })
+        );
     }
   }
 
@@ -88,9 +117,15 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
   }
 
   async createPlaylistForSpotifyUser(posterId: string, spotifyUserId: string) {
-    const spotifyUserAgent = this.getSpotifyUserAgent(spotifyUserId);
-    // TODO: Port this logic
-    // Use the Posters tracks for each band in the state
+    const spotifyUserAgent = await getAgentByName(
+      this.env.SpotifyUserAgent,
+      spotifyUserId
+    );
+    const playlistId = await spotifyUserAgent.addBandAidPlaylist(posterId);
+    this
+      .sql`INSERT INTO poster_playlists (playlist_id, poster_id, spotify_user_id) VALUES (${playlistId}, ${posterId}, ${spotifyUserId})`;
+    // TODO: Should we update state?
+    return playlistId;
   }
 
   async submitPoster(url: string) {
@@ -102,8 +137,7 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
     await posterAgent.initialize(url);
     // Update poster record to the generated slug
     const slug = (await posterAgent.getSlug()) as string;
-    this
-      .sql`UPDATE poster_submissions SET slug=${slug} WHERE id=${id}`;
+    this.sql`UPDATE poster_submissions SET slug=${slug} WHERE id=${id}`;
     const state = this.state || { posters: [] };
     state.posters.push({
       id,

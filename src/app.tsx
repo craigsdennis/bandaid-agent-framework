@@ -1,4 +1,4 @@
-import { useAgent } from "@cloudflare/agents/react";
+import { useAgent } from "agents-sdk/react";
 import { useState } from "react";
 
 // interface Message {
@@ -34,11 +34,11 @@ export default function App() {
 
   const debugOrchestratorState = (e: React.FormEvent) => {
     e.preventDefault();
-    agent.send("state.debug");
+    agent.send(JSON.stringify({event: "state.debug"}));
   };
   const deleteAllPosters = (e: React.FormEvent) => {
     e.preventDefault();
-    agent.send("delete.posters");
+    agent.send(JSON.stringify({event: "delete.posters.all"}));
   };
 
   return (

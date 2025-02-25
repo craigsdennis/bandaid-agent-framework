@@ -11,9 +11,8 @@ import { PosterAgent } from "./agents/poster";
 import { SpotifyUserAgent } from "./agents/spotify-user";
 import { SpotifyResearcher } from "./workflows/spotify-researcher";
 import { Hono } from "hono";
-import { setCookie } from "hono/cookie";
+import { deleteCookie, setCookie } from "hono/cookie";
 import { agentsMiddleware } from "hono-agents";
-
 
 import type { AccessToken, UserProfile } from "@spotify/web-api-ts-sdk";
 
@@ -67,20 +66,30 @@ app.get("/spotify/callback", async (c) => {
     },
   });
   const profile: UserProfile = await profileResponse.json();
-  const id = c.env.SpotifyUserAgent.idFromName(profile.id);
-  // Creates a new agent or gets an existing one
-  const stub = c.env.SpotifyUserAgent.get(id);
+  const spotifyUserAgent = await getAgentByName(
+    c.env.SpotifyUserAgent,
+    profile.id
+  );
   // Always overwrites existing profile
-  await stub.initialize(profile, tokenResult);
+  await spotifyUserAgent.initialize(profile, tokenResult);
   setCookie(c, "spotifyUserId", profile.id);
   // Safe to send to client, still need private key
   setCookie(c, "spotifyAccessToken", tokenResult.access_token);
   return c.redirect("/");
 });
 
+app.get("/spotify/remove/:userId", async (c) => {
+  const { userId } = c.req.param();
+  const agent = await getAgentByName(c.env.SpotifyUserAgent, userId);
+  await agent.destroy();
+  deleteCookie(c, "spotifyUserId");
+  deleteCookie(c, "spotifyAccessToken");
+  return c.redirect("/");
+});
+
 app.notFound((c) => {
-	// We have a single page app
-	return c.env.ASSETS.fetch(c.req.raw);
+  // We have a single page app
+  return c.env.ASSETS.fetch(c.req.raw);
 });
 type QueueMessage = {
   action: string;
@@ -112,5 +121,4 @@ export default {
       msg.ack();
     }
   },
-
 } satisfies ExportedHandler<Env, QueueMessage>;

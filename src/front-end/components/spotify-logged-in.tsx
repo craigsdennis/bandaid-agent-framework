@@ -6,17 +6,18 @@ function getCookieValue(name: string): string | undefined {
   return match ? decodeURIComponent(match[2]) : undefined;
 }
 
-export default function SpotifyLoggedIn({children}) {
+export default function SpotifyLoggedIn({handler, children}) {
   const spotifyUserId = getCookieValue("spotifyUserId");
   console.log({cookie: document.cookie});
   console.log({spotifyUserId});
 
   if (spotifyUserId) {
     return (
-      <div>
+      <form action={handler}>
         <p className="logged-in-as">🎧 {spotifyUserId}</p>
+        <input type="hidden" name="spotify_user_id" value={spotifyUserId} />
         {children}
-      </div>
+      </form>
     )
   } else {
     return <div><a href="/spotify/login">Login to Spotify?</a></div>;

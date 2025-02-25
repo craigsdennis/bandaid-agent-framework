@@ -4,7 +4,7 @@
 
 - [x] spawns poster agents from url
 - [x] returns all posters
-- [ ] creates playlist for poster specific Spotify User
+- [x] creates playlist for poster specific Spotify User
 - [ ] periodically checks in with Spotify User
 - [ ] emails about upcoming shows
 - [ ] buys tickets for show
@@ -17,13 +17,13 @@
 # PosterAgent
 
 - [x] extracts bands/dates
-- [ ] researches bands, gathers links
+- [x] researches bands, gathers links
 - [ ] researches venue (if known)
 
 # SpotifyUserAgent
 
 (handles token refreshing / oauth2)
 - [x] creates playlist from Poster tracks
-- [ ] creates playlist from Poster tracks
-- [ ] tracks listens to playlisted tracks
+- [x] creates playlist from Poster tracks
+- [x] tracks listens to playlisted tracks
 - [ ] produces listening vibe?

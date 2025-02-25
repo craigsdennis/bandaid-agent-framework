@@ -1,7 +1,9 @@
-import { useAgent } from "@cloudflare/agents/react";
-import { useState } from "react";
+import { useAgent } from "agents-sdk/react";
+import { AgentClient } from "agents-sdk/client";
+import { useState, type FormEvent } from "react";
 import SpotifyArtist from "../components/spotify-artist";
 import SpotifyLoggedIn from "../components/spotify-logged-in";
+import type { ReactFormState } from "react-dom/client";
 
 export interface SpotifyArtistSummary {
   name: string;
@@ -31,7 +33,7 @@ function summaryFor(poster: PosterState, bandName: string) {
 
 export default function Poster({ id }) {
   const [poster, setPoster] = useState<PosterState>();
-
+  
   const agent = useAgent({
     agent: "poster-agent",
     name: id,
@@ -41,6 +43,23 @@ export default function Poster({ id }) {
       setPoster(state);
     },
   });
+
+  const handlePlaylistRequest = (formData: FormData) => {
+    
+    const orchestratorClient = new AgentClient({
+        host: window.location.host,
+        agent: "orchestrator",
+        name: "main"
+    });
+    orchestratorClient.send(JSON.stringify({
+        event: "poster.playlist.create",
+        posterId: formData.get("poster_id"),
+        spotifyUserId: formData.get("spotify_user_id")
+    }));
+    orchestratorClient.addEventListener("message", (message) => {
+        console.log("Orchestrator message", message);
+    })
+  }
 
   return (
     <div>
@@ -57,8 +76,9 @@ export default function Poster({ id }) {
           <SpotifyArtist key={bandName} summary={summaryFor(poster, bandName)} />
         </>
       ))}
-      <SpotifyLoggedIn>
-        <p>Add a playlist?</p>
+      <SpotifyLoggedIn handler={handlePlaylistRequest}>
+        <input type="hidden" name="poster_id" value={id} />
+        <button type="submit">Add playlist for {poster?.tourName}</button>
       </SpotifyLoggedIn>
     </div>
   );

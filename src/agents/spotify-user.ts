@@ -1,5 +1,5 @@
-import { Agent, type Connection, type ConnectionContext, type WSMessage } from "@cloudflare/agents";
-import {type AccessToken, SpotifyApi, type UserProfile } from '@spotify/web-api-ts-sdk';
+import { Agent, getAgentByName, type Connection, type ConnectionContext, type WSMessage } from "@cloudflare/agents";
+import {type AccessToken, type Playlist, SpotifyApi, type UserProfile } from '@spotify/web-api-ts-sdk';
 import { match } from "assert";
 import { log } from "console";
 
@@ -19,6 +19,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
         this.sql`CREATE TABLE IF NOT EXISTS watched_tracks (
             id INTEGER AUTO INCREMENT PRIMARY KEY,
             uri VARCHAR(255) NOT NULL,
+            poster_id VARCHAR(255),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );`
 
@@ -60,6 +61,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
             loggedInAt
         };
         this.setState(state);
+        this.addToken(tokenResult);
 	}
     
     addToken(token: AccessToken) {
@@ -76,8 +78,8 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     }
 
     async getCurrentToken(): Promise<AccessToken> {
-        const rows = this.sql`SELECT json_token FROM tokens ORDER BY created_at DESC LIMIT 1;`;
-        const tokenJSON = rows[0].json_token;
+        const rows = this.sql`SELECT token_json FROM tokens ORDER BY created_at DESC LIMIT 1;`;
+        const tokenJSON = rows[0].token_json;
         return JSON.parse(tokenJSON);
     }
 
@@ -107,7 +109,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
 		const sdk = await this.getSdk();
 		let cursor: number = since;
 		let now = Date.now().valueOf();
-		console.log({now})
+		console.log({now});
 		let uris: string[] = [];
 		while (cursor) {
 			const tracks = await sdk.player.getRecentlyPlayedTracks(50, {
@@ -158,8 +160,8 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
         return rows.map(row => row.uri);
     }
 
-
     async getSdk() {
+        console.log("Getting authenticated SDK");
         const state = this.state as SpotifyUserState;
         let accessToken: AccessToken;
         if (state.expires > Date.now().valueOf()) {
@@ -170,18 +172,26 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
         return SpotifyApi.withAccessToken(this.env.SPOTIFY_CLIENT_ID, accessToken);
     }
 
-    async addBandAidPlaylist(name: string, description: string, trackUris: string[]): Promise<string> {
+    async addBandAidPlaylist(posterId: string): Promise<string> {
+        console.log(`Adding poster for ${posterId}`);
         const sdk = await this.getSdk();
+        console.log({sdk});
+        const posterAgent = await getAgentByName(this.env.PosterAgent, posterId);
+        console.log({posterAgent})
+        const tourName = await posterAgent.getTourName();
+        const bandNames = await posterAgent.getBandNames()
+        const trackUris = await posterAgent.getTrackUris();    
+        console.log({tourName, bandNames, trackUris});
         const state = this.state as SpotifyUserState;
         const userId = state.id as string;
         const playlist = await sdk.playlists.createPlaylist(userId, {
-			name,
-			description,
+            name: `BandAid / ${tourName}`,
+            description: `A BandAid playlist featuring songs from ${bandNames?.join(", ")}`,
 			collaborative: true,
 			public: true,
 		});
         await sdk.playlists.addItemsToPlaylist(playlist.id, trackUris);
-        trackUris.forEach((uri) => this.sql`INSERT INTO watched_tracks (uri) VALUES (${uri});`);
+        trackUris.forEach((uri) => this.sql`INSERT INTO watched_tracks (uri, poster_id) VALUES (${uri}, ${posterId});`);
         state.playlistUrls = state.playlistUrls || [];
         state.playlistUrls.push(playlist.external_urls.spotify);
         this.setState(state);
