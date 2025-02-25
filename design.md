@@ -23,7 +23,7 @@
 # SpotifyUserAgent
 
 (handles token refreshing / oauth2)
-
+- [x] creates playlist from Poster tracks
 - [ ] creates playlist from Poster tracks
 - [ ] tracks listens to playlisted tracks
 - [ ] produces listening vibe?

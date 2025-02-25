@@ -9,7 +9,9 @@
   "compatibility_date": "2025-02-04",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
-    "directory": "public"
+    "directory": "public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
   },
   "browser": { "binding": "BROWSER" },
   "workflows": [
