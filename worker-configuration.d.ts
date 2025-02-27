@@ -11,6 +11,7 @@ interface Env {
 	SpotifyUserAgent: DurableObjectNamespace<import("./src/server").SpotifyUserAgent>;
 	BAND_AID: R2Bucket;
 	BROWSER: Fetcher;
+	AI: Ai;
 	ASSETS: Fetcher;
 	SPOTIFY_RESEARCHER: Workflow;
 }

@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import { SpotifyApi } from "@spotify/web-api-ts-sdk";
 import {
   WorkflowEntrypoint,
@@ -96,9 +95,7 @@ export class SpotifyResearcher extends WorkflowEntrypoint<
             summary = await step.do(
               `Summarize description for ${summary.name}`,
               async () => {
-                const oai = new OpenAI({ apiKey: this.env.OPENAI_API_KEY });
-                const completion = await oai.chat.completions.create({
-                  model: "gpt-4o",
+                const result: AiTextGenerationOutput = await this.env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
                   messages: [
                     {
                       role: "system",
@@ -114,10 +111,10 @@ export class SpotifyResearcher extends WorkflowEntrypoint<
                     { role: "user", content: fullDescription },
                   ],
                 });
-                const summarizedDescription =
-                  completion.choices[0].message.content;
+                //@ts-ignore why?
+                const summarizedDescription: string = result.response;
 
-                summary.description = summarizedDescription as string;
+                summary.description = summarizedDescription;
                 return summary;
               }
             );

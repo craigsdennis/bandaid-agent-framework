@@ -58,7 +58,8 @@
         "queue": "uploaded-band-poster"
       }
     ]
-  }
+  },
+  "ai": {"binding": "AI"}
 
   /**
    * Smart Placement
