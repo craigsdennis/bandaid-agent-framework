@@ -4,7 +4,7 @@ import {
   type Connection,
   type ConnectionContext,
   type WSMessage,
-} from "@cloudflare/agents";
+} from "agents-sdk";
 import type { PosterState } from "./poster";
 
 export type PosterSummary = {

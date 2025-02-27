@@ -6,7 +6,7 @@ import {
 } from "cloudflare:workers";
 import puppeteer from "@cloudflare/puppeteer";
 import type { SpotifyArtistSummary } from "../agents/poster";
-import { getAgentByName } from "@cloudflare/agents";
+import { getAgentByName } from "agents-sdk";
 
 export type ResearcherParams = {
   posterAgentName: string;

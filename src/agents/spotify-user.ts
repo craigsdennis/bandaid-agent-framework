@@ -1,7 +1,5 @@
 import { Agent, getAgentByName, type Connection, type ConnectionContext, type WSMessage } from "@cloudflare/agents";
 import {type AccessToken, type Playlist, SpotifyApi, type UserProfile } from '@spotify/web-api-ts-sdk';
-import { match } from "assert";
-import { log } from "console";
 
 export type SpotifyUserState = {
     expires: number,
@@ -171,13 +169,10 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     async addBandAidPlaylist(posterId: string): Promise<string> {
         console.log(`Adding poster for ${posterId}`);
         const sdk = await this.getSdk();
-        console.log({sdk});
         const posterAgent = await getAgentByName(this.env.PosterAgent, posterId);
-        console.log({posterAgent})
         const tourName = await posterAgent.getTourName();
         const bandNames = await posterAgent.getBandNames()
         const trackUris = await posterAgent.getTrackUris();    
-        console.log({tourName, bandNames, trackUris});
         const state = this.state as SpotifyUserState;
         const userId = state.id as string;
         const playlist = await sdk.playlists.createPlaylist(userId, {

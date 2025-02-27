@@ -1,10 +1,4 @@
-import {
-  Agent,
-  getAgentByName,
-  routeAgentRequest,
-  type Connection,
-  type ConnectionContext,
-} from "@cloudflare/agents";
+import { getAgentByName } from "agents-sdk";
 
 import { Orchestrator } from "./agents/orchestrator";
 import { PosterAgent } from "./agents/poster";

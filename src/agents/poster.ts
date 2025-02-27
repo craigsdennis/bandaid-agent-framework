@@ -3,7 +3,7 @@ import {
   type Connection,
   type ConnectionContext,
   type WSMessage,
-} from "@cloudflare/agents";
+} from "agents-sdk";
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod.mjs";
 import { z } from "zod";
