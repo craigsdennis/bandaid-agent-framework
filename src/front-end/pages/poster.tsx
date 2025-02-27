@@ -4,27 +4,8 @@ import { useState, type FormEvent } from "react";
 import SpotifyArtist from "../components/spotify-artist";
 import SpotifyLoggedIn from "../components/spotify-logged-in";
 import type { ReactFormState } from "react-dom/client";
+import type { PosterState } from "../../agents/poster";
 
-export interface SpotifyArtistSummary {
-  name: string;
-  description: string;
-  spotify_url: string;
-  genres: string[];
-}
-
-interface EventSchema {
-    venue: string;
-    location: string;
-    date: string;
-}
-
-interface PosterState {
-  tourName: string;
-  bandNames: string[];
-  events: EventSchema[];
-  imageUrl: string;
-  spotifyArtistSummaries: SpotifyArtistSummary[];
-}
 
 function summaryFor(poster: PosterState, bandName: string) {
   if (poster.spotifyArtistSummaries === undefined) return;

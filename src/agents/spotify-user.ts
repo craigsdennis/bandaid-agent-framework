@@ -37,10 +37,6 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
         );`;
     }
     
-
-    onStart(): void | Promise<void> {
-    }
-    
     onConnect(connection: Connection, ctx: ConnectionContext): void | Promise<void> {
         console.log("A client has connected");
     }

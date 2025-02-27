@@ -44,7 +44,7 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
   }
 
   async onMessage(connection: Connection, message: WSMessage): Promise<void> {
-    console.log(message);
+    console.log({message});
     const payload = JSON.parse(message.toString());
     switch (payload.event) {
       case "state.debug":
@@ -69,7 +69,7 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
             this.env.PosterAgent,
             row.id
           );
-          console.log(`Deleting ${await posterAgent.getSlug()}`);
+          console.log(`Destroying poster ${row.id}`);
           await posterAgent.destroy();
         }
         this.sql`DELETE FROM poster_submissions;`;
@@ -109,11 +109,6 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
     const id = this
       .sql<string>`SELECT id FROM poster_submissions WHERE slug=${slug} LIMIT 1;`;
     return id[0];
-  }
-
-  getSpotifyUserAgent(userId: string) {
-    const id = this.env.SpotifyUserAgent.idFromName(userId);
-    return this.env.SpotifyUserAgent.get(id);
   }
 
   async createPlaylistForSpotifyUser(posterId: string, spotifyUserId: string) {

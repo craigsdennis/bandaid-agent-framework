@@ -1,20 +1,10 @@
 import { useAgent } from "agents-sdk/react";
 import { useState } from "react";
-
-// interface Message {
-//   text: string;
-//   isUser: boolean;
-// }
-
-interface Poster {
-  id: string;
-  imageUrl: string;
-  slug: string;
-}
+import type { OrchestratorState, PosterSummary } from "./agents/orchestrator";
 
 export default function App() {
   const [result, setResult] = useState<string>("");
-  const [posters, setPosters] = useState<Poster[]>([]);
+  const [posters, setPosters] = useState<PosterSummary[]>([]);
 
   const agent = useAgent({
     agent: "orchestrator",
@@ -26,7 +16,7 @@ export default function App() {
       console.log("Message received");
       setResult(message.data);
     },
-    onStateUpdate: (state: { posters: Poster[] }, source) => {
+    onStateUpdate: (state: OrchestratorState, source) => {
       console.log("State updated");
       setPosters(state.posters);
     },
