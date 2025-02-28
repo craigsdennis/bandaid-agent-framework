@@ -1,6 +1,7 @@
 import { useAgent } from "agents-sdk/react";
 import { useState } from "react";
 import type { OrchestratorState, PosterSummary } from "./agents/orchestrator";
+import Layout from "./front-end/Layout";
 
 export default function App() {
   const [result, setResult] = useState<string>("");
@@ -32,7 +33,7 @@ export default function App() {
   };
 
   return (
-    <div>
+    <Layout>
       <h1>BandAid</h1>
       <p>Don't forget to check out the console, nerd 🤓</p>
       {posters.map((poster) => (
@@ -51,6 +52,6 @@ export default function App() {
         </button>
         <button onClick={deleteAllPosters}>Delete All Posters</button>
       </form>
-    </div>
+    </Layout>
   );
 }

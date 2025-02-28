@@ -5,6 +5,7 @@ import SpotifyArtist from "../components/spotify-artist";
 import SpotifyLoggedIn from "../components/spotify-logged-in";
 import type { ReactFormState } from "react-dom/client";
 import type { PosterState } from "../../agents/poster";
+import Layout from "../Layout";
 
 
 function summaryFor(poster: PosterState, bandName: string) {
@@ -43,7 +44,7 @@ export default function Poster({ id }) {
   }
 
   return (
-    <div>
+    <Layout>
       <h1>{poster?.tourName}</h1>
       <img src={poster?.imageUrl} />
       <h2>When</h2>
@@ -61,6 +62,6 @@ export default function Poster({ id }) {
         <input type="hidden" name="poster_id" value={id} />
         <button type="submit">Add playlist for {poster?.tourName}</button>
       </SpotifyLoggedIn>
-    </div>
+    </Layout>
   );
 }

@@ -1,6 +1,7 @@
 import { useAgent } from "agents-sdk/react";
 import type { SpotifyUserState } from "../../agents/spotify-user";
 import type { FormEvent } from "react";
+import Layout from "../Layout";
 
 export default function User({ id }) {
   const agent = useAgent({
@@ -33,13 +34,13 @@ export default function User({ id }) {
   }
   
   return (
-  <div>
+  <Layout>
       <h1>User {id} </h1>;
       <form>
         <button onClick={getRecentTracks}>Get Recent Tracks</button>
         <button onClick={runRecentPlaylistCheck}>Run Playlist Checks</button>
 
       </form>
-  </div>
+  </Layout>
   );
 }
