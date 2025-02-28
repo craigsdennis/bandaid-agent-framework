@@ -39,8 +39,25 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
         console.log("A client has connected");
     }
 
-    onMessage(connection: Connection, message: WSMessage): void | Promise<void> {
-        // TODO: Answer questions about the user Tool call wise?
+    async onMessage(connection: Connection, message: WSMessage): Promise<void> {
+        const payload = JSON.parse(message.toString());
+        switch (payload.event) {
+            case "tracks.recent":
+                const recentTrackUris = await this.getRecentTrackUris(payload.since);
+                connection.send(JSON.stringify({recentTrackUris}));
+                break;
+            case "playlist.check":
+                const runResults = await this.runRecentPlaylistListensCheck();
+                const allRuns = this.sql`SELECT * FROM recently_played_check_log ORDER BY run_completed_at DESC`;
+                connection.send(JSON.stringify({
+                    runResults,
+                    allRuns
+                }))
+                break;
+            default:
+                console.warn("Unhandled event", payload.event);
+                break;
+        }
     }
 
     async initialize(profile: UserProfile, tokenResult: AccessToken) {
@@ -102,8 +119,6 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     async getRecentTrackUris(since: number): Promise<string[]> {
 		const sdk = await this.getSdk();
 		let cursor: number = since;
-		let now = Date.now().valueOf();
-		console.log({now});
 		let uris: string[] = [];
 		while (cursor) {
 			const tracks = await sdk.player.getRecentlyPlayedTracks(50, {
@@ -111,7 +126,6 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
 				type: 'after',
 			});
 			uris = uris.concat(tracks.items.map((item) => item.track.uri));
-			console.log({cursors: tracks.cursors, cursor});
 			if (tracks.cursors) {
                 // Sup with this string?
 				cursor = parseInt(tracks.cursors.after);
@@ -122,8 +136,8 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
 		return uris;
 	}
 
-    async checkForRecentPlaylistListens(): Promise<string[]> {
-		const rows = this.sql`SELECT run_completed_at FROM listen_checks ORDER BY run_completed_at DESC LIMIT 1;`;
+    async runRecentPlaylistListensCheck(): Promise<string[]> {
+		const rows = this.sql`SELECT run_completed_at FROM recently_played_check_log ORDER BY run_completed_at DESC LIMIT 1;`;
 
 		let since: number;
 		if (rows.length === 0) {
@@ -131,21 +145,18 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
 			console.log('First run going back in time', TEN_DAYS);
 			since = Date.now().valueOf() - TEN_DAYS;
 		} else {
-			since = rows[0].run_completed_at as number;
+			since = new Date(rows[0].run_completed_at).valueOf();
+            console.log({since})
 		}
 		const recentTrackUris = await this.getRecentTrackUris(since);
 		const watchedTrackUris = await this.getWatchedTrackUris();
 		// Find gather all added tracks for this entry
 		// Add Matches uri,poster_id (multiple posters)
 		const matchedUris = recentTrackUris.filter((t) => watchedTrackUris.includes(t));
-		// TODO: Loop the matches and notify the poster
-		// ???: Time is important right?
-		// TODO: Add userId + time to Poster.listens?
-		//this.setConfig('lastCheckForListens', Date.now().valueOf().toString());
         // TODO: Notify
-        this.sql`INSERT INTO recently_played_check_log VALUES 
-        (total_recent, total_matches_found, total_watched_at_time_of_check) 
-        VALUES (${recentTrackUris.length}, ${matchedUris.length}, ${watchedTrackUris.length});`
+        this.sql`INSERT INTO recently_played_check_log 
+        (total_recent, total_matches_found, total_watched_at_time_of_check) VALUES
+         (${recentTrackUris.length}, ${matchedUris.length}, ${watchedTrackUris.length});`
 
 		return matchedUris;
 	}

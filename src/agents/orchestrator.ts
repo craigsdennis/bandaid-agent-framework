@@ -5,7 +5,6 @@ import {
   type ConnectionContext,
   type WSMessage,
 } from "agents-sdk";
-import type { PosterState } from "./poster";
 
 export type PosterSummary = {
   id: string;
