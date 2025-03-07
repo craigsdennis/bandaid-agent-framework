@@ -1,5 +1,7 @@
 import { Agent, getAgentByName, type Connection, type ConnectionContext, type WSMessage } from "@cloudflare/agents";
 import {type AccessToken, type Playlist, SpotifyApi, type UserProfile } from '@spotify/web-api-ts-sdk';
+import type { AgentContext } from "agents-sdk";
+import { match } from "assert";
 
 export type SpotifyUserState = {
     expires: number,
@@ -8,7 +10,7 @@ export type SpotifyUserState = {
 } & UserProfile;
 
 export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
-    constructor(ctx: DurableObjectState, env: Env) {
+    constructor(ctx: AgentContext, env: Env) {
         super(ctx, env);
         this.sql`CREATE TABLE IF NOT EXISTS playlists (
             id VARCHAR(255) PRIMARY KEY,
@@ -20,7 +22,6 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
             poster_id VARCHAR(255),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );`
-
         this.sql`CREATE TABLE IF NOT EXISTS tokens (
             id INTEGER AUTO INCREMENT PRIMARY KEY,
             token_json TEXT NOT NULL,
@@ -153,11 +154,15 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
 		// Find gather all added tracks for this entry
 		// Add Matches uri,poster_id (multiple posters)
 		const matchedUris = recentTrackUris.filter((t) => watchedTrackUris.includes(t));
-        // TODO: Notify
+        matchedUris.forEach((uri) => {
+            const rows = this.sql`SELECT poster_id FROM watched_tracks WHERE uri=${uri}`;
+            for (const row of rows) {
+                // TODO: You don't want to grab every poster
+            }
+        })
         this.sql`INSERT INTO recently_played_check_log 
         (total_recent, total_matches_found, total_watched_at_time_of_check) VALUES
          (${recentTrackUris.length}, ${matchedUris.length}, ${watchedTrackUris.length});`
-
 		return matchedUris;
 	}
     async getWatchedTrackUris(): Promise<string[]> {
@@ -169,6 +174,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
         console.log("Getting authenticated SDK");
         const state = this.state as SpotifyUserState;
         let accessToken: AccessToken;
+        // TODO: Verify this flow
         if (state.expires > Date.now().valueOf()) {
             accessToken = await this.refreshToken();
         } else {

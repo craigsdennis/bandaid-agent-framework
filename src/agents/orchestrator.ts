@@ -57,6 +57,10 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
           })
         );
         break;
+      case "add.poster":
+        console.log(`Submitting ${payload.url}`);
+        await this.submitPoster(payload.url); 
+        break;
       case "delete.posters.all":
         const rows = this.sql<{
           id: string;

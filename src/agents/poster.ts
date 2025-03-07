@@ -1,5 +1,6 @@
 import {
   Agent,
+  type AgentContext,
   type Connection,
   type ConnectionContext,
   type WSMessage,
@@ -56,6 +57,15 @@ export type PosterState = {
 } & PosterMetadata;
 
 export class PosterAgent extends Agent<Env, PosterState> {
+  constructor(ctx: AgentContext, env: Env) {
+    super(ctx, env);
+    this.sql`CREATE TABLE IF NOT EXISTS listeners (
+      spotify_user_id TEXT PRIMARY KEY,
+      listen_count INTEGER NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );`;
+  }
+
   async initialize(url: string) {
     let imageUrl = url;
     if (url.startsWith("r2://")) {
@@ -126,14 +136,18 @@ export class PosterAgent extends Agent<Env, PosterState> {
   }
 
   async getTrackUris(): Promise<string[]> {
-    const summaries = this.state?.spotifyArtistSummaries as SpotifyArtistSummary[];
-    return summaries?.flatMap((summary) => summary.topTracksUris as string[]); 
+    const summaries = this.state
+      ?.spotifyArtistSummaries as SpotifyArtistSummary[];
+    return summaries?.flatMap((summary) => summary.topTracksUris as string[]);
   }
 
   addSpotifyArtistSummary(summary: SpotifyArtistSummary) {
     const summaries = this.state?.spotifyArtistSummaries || [];
     summaries.push(summary);
-    this.setState({...this.state as PosterState, spotifyArtistSummaries: summaries});
+    this.setState({
+      ...(this.state as PosterState),
+      spotifyArtistSummaries: summaries,
+    });
   }
 
   getPublicPosterUrl(): string | undefined {

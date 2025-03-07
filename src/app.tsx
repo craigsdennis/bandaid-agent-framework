@@ -22,27 +22,44 @@ export default function App() {
       setPosters(state.posters);
     },
   });
+  type Params = {
+    formData: FormData;
+  };
+  const addPoster = (formData: FormData) => {
+    agent.send(
+      JSON.stringify({
+        event: "add.poster",
+        url: formData.get("url"),
+      })
+    );
+  };
 
   const debugOrchestratorState = (e: React.FormEvent) => {
     e.preventDefault();
-    agent.send(JSON.stringify({event: "state.debug"}));
+    agent.send(JSON.stringify({ event: "state.debug" }));
   };
   const deleteAllPosters = (e: React.FormEvent) => {
     e.preventDefault();
-    agent.send(JSON.stringify({event: "delete.posters.all"}));
+    agent.send(JSON.stringify({ event: "delete.posters.all" }));
   };
 
   return (
     <Layout>
       <h1>BandAid</h1>
-      <p>Don't forget to check out the console, nerd 🤓</p>
       {posters.map((poster) => (
         <div key={poster.slug}>
           <a href={`/posters/${poster.id}`}>
-          <img src={poster.imageUrl} />
+            <img src={poster.imageUrl} />
           </a>
         </div>
       ))}
+      <form action={addPoster}>
+        <input name="url" placeholder="URL of band poster" />
+        <button type="submit">Add Poster</button>
+      </form>
+      <hr />
+      <h2>Admin</h2>
+      <p>Don't forget to check out the console, nerd 🤓</p>
       <div>
         Latest message: <code>{result}</code>
       </div>
