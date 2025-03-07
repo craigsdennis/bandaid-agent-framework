@@ -1,10 +1,12 @@
 import {
   Agent,
   getAgentByName,
+  type AgentNamespace,
   type Connection,
   type ConnectionContext,
   type WSMessage,
 } from "agents-sdk";
+import type { PosterAgent } from "./poster";
 
 export type PosterSummary = {
   id: string;
@@ -17,6 +19,7 @@ export type OrchestratorState = {
 };
 
 export class Orchestrator extends Agent<Env, OrchestratorState> {
+  private _cachedPosterStubsByName: Map<string, DurableObjectStub<PosterAgent>>;
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.sql`CREATE TABLE IF NOT EXISTS poster_submissions (
@@ -32,15 +35,28 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
             spotify_user_id TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );`;
+      // On reload this will be empty
+      this._cachedPosterStubsByName = new Map();
   }
 
-  onStateUpdate(
-    state: OrchestratorState | undefined,
-    source: Connection | "server"
-  ): void {
-    console.log("Orchestrator state updated");
-    this.broadcast("State updated (using broadcast)");
+  async getExistingPosterByName(name: string): Promise<DurableObjectStub<PosterAgent>> {
+    if (this._cachedPosterStubsByName.has(name)) {
+      return this._cachedPosterStubsByName.get(name) as DurableObjectStub<PosterAgent>;
+    }
+    const poster = await getAgentByName(this.env.PosterAgent, name);
+    // Add to local temporary cache
+    this._cachedPosterStubsByName.set(name, poster);
+    return poster;
   }
+
+
+  // onStateUpdate(
+  //   state: OrchestratorState | undefined,
+  //   source: Connection | "server"
+  // ): void {
+  //   console.log("Orchestrator state updated");
+  //   this.broadcast("State updated (using broadcast)");
+  // }
 
   async onMessage(connection: Connection, message: WSMessage): Promise<void> {
     console.log({message});
@@ -68,10 +84,7 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
         console.log(`There are ${rows.length} posters to delete`);
         for (const row of rows) {
           console.log(`Getting ${row.id}`);
-          const posterAgent = await getAgentByName(
-            this.env.PosterAgent,
-            row.id
-          );
+          const posterAgent = await this.getExistingPosterByName(row.id);
           console.log(`Destroying poster ${row.id}`);
           await posterAgent.destroy();
         }
