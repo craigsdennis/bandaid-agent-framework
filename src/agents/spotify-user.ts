@@ -154,12 +154,12 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
 		// Find gather all added tracks for this entry
 		// Add Matches uri,poster_id (multiple posters)
 		const matchedUris = recentTrackUris.filter((t) => watchedTrackUris.includes(t));
-        matchedUris.forEach((uri) => {
-            const rows = this.sql`SELECT poster_id FROM watched_tracks WHERE uri=${uri}`;
-            for (const row of rows) {
-                // TODO: You don't want to grab every poster
-            }
-        })
+        // matchedUris.forEach((uri) => {
+        //     const rows = this.sql`SELECT poster_id FROM watched_tracks WHERE uri=${uri}`;
+        //     for (const row of rows) {
+        //         // TODO: You don't want to grab every poster
+        //     }
+        // })
         this.sql`INSERT INTO recently_played_check_log 
         (total_recent, total_matches_found, total_watched_at_time_of_check) VALUES
          (${recentTrackUris.length}, ${matchedUris.length}, ${watchedTrackUris.length});`
@@ -174,8 +174,8 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
         console.log("Getting authenticated SDK");
         const state = this.state as SpotifyUserState;
         let accessToken: AccessToken;
-        // TODO: Verify this flow
-        if (state.expires > Date.now().valueOf()) {
+        console.log(state.expires, Date.now().valueOf());
+        if (state.expires < Date.now().valueOf()) {
             accessToken = await this.refreshToken();
         } else {
             accessToken = await this.getCurrentToken();
