@@ -1,4 +1,13 @@
+function getCookieValue(name: string): string | undefined {
+  const match = document.cookie.match(
+    new RegExp("(^|;)\\s*" + name + "=([^;]+)")
+  );
+  return match ? decodeURIComponent(match[2]) : undefined;
+}
+
 export default function Layout({children}) {
+    const spotifyUserId = getCookieValue("spotifyUserId");
+    
     return (
         <>
         <header>
@@ -10,7 +19,13 @@ export default function Layout({children}) {
                 <ul>
                     <li><a href="/">Home</a></li>
                     <li><a href="/posters">Posters</a></li>
-                    <li><a href="/user">My Profile</a></li>
+                    <li>
+                        {spotifyUserId ? (
+                            <a href={`/users/${spotifyUserId}`}>Your Spotify Profile</a>
+                        ) : (
+                            <a href="/spotify/login">Login</a>
+                        )}
+                    </li>
                 </ul>
             </nav>
         </header>

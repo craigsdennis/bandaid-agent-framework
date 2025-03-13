@@ -4,13 +4,14 @@ import { Orchestrator } from "./agents/orchestrator";
 import { PosterAgent } from "./agents/poster";
 import { SpotifyUserAgent } from "./agents/spotify-user";
 import { SpotifyResearcher } from "./workflows/spotify-researcher";
+import { ImageNormalizer } from "./workflows/image-normalizer";
 import { Hono } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import { agentsMiddleware } from "hono-agents";
 
 import type { AccessToken, UserProfile } from "@spotify/web-api-ts-sdk";
 
-export { Orchestrator, PosterAgent, SpotifyUserAgent, SpotifyResearcher };
+export { Orchestrator, PosterAgent, SpotifyUserAgent, SpotifyResearcher, ImageNormalizer };
 
 const app = new Hono<{ Bindings: Env }>();
 app.use("*", agentsMiddleware());
@@ -107,7 +108,7 @@ export default {
           //const orchestrator = await getAgentByName(env.Orchestrator, "main") as DurableObjectStub;
           const orchestratorId = env.Orchestrator.idFromName("main");
           const orchestrator = env.Orchestrator.get(orchestratorId);
-          await orchestrator.submitPoster(`r2://${key}`);
+          await orchestrator.submitPoster(`r2://uploads/${key}`);
         default:
           console.log(`Unhandled action ${payload.action}`, payload);
           break;

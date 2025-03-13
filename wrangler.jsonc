@@ -19,8 +19,14 @@
       "binding": "SPOTIFY_RESEARCHER",
       "class_name": "SpotifyResearcher",
       "name": "SpotifyResearcher"
+    },
+    {
+      "binding": "IMAGE_NORMALIZER",
+      "class_name": "ImageNormalizer",
+      "name": "ImageNormalizer"
     }
   ],
+  "images": {"binding": "IMAGES"},
   "durable_objects": {
     "bindings": [
       {
@@ -49,7 +55,11 @@
   "r2_buckets": [
     {
       "bucket_name": "band-aid",
-      "binding": "BAND_AID"
+      "binding": "UPLOADS"
+    },
+    {
+      "bucket_name": "posters",
+      "binding": "POSTERS"
     }
   ],
   "queues": {

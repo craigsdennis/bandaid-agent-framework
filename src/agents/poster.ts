@@ -1,5 +1,6 @@
 import {
   Agent,
+  getAgentByName,
   type AgentContext,
   type Connection,
   type ConnectionContext,
@@ -52,7 +53,9 @@ export type SpotifyArtistSummary = {
 };
 
 export type PosterState = {
-  imageUrl: string;
+  uploadedImageUrl: string;
+  imageUrl?: string;
+  posterR2Url?: string;
   spotifyArtistSummaries?: SpotifyArtistSummary[];
 } & PosterMetadata;
 
@@ -68,10 +71,10 @@ export class PosterAgent extends Agent<Env, PosterState> {
 
   async initialize(url: string) {
     let imageUrl = url;
-    if (url.startsWith("r2://")) {
-      const key = url.replace("r2://", "");
+    if (url.startsWith("r2://uploads/")) {
+      const key = url.replace("r2://uploads/", "");
       // BAND_AID is the r2 bucket
-      const fileUpload = await this.env.BAND_AID.get(key);
+      const fileUpload = await this.env.UPLOADS.get(key);
       if (fileUpload === null) {
         return;
       }
@@ -99,15 +102,17 @@ export class PosterAgent extends Agent<Env, PosterState> {
     });
     const posterMetadata = completion.choices[0].message
       .parsed as PosterMetadata;
-    const state = { imageUrl: url, ...posterMetadata };
+    const state = { uploadedImageUrl: url, ...posterMetadata };
     this.setState(state);
   }
 
-  onStateUpdate(
+  async onStateUpdate(
     state: PosterState | undefined,
     source: Connection | "server"
-  ): void {
+  ): Promise<void> {
     console.log("Poster state updated");
+    const orchestrator = await getAgentByName(this.env.Orchestrator, "main");
+    await orchestrator.onPosterChange(this.name);
   }
 
   onConnect(
@@ -150,12 +155,36 @@ export class PosterAgent extends Agent<Env, PosterState> {
     });
   }
 
+  getUploadedImageUrl(): string {
+    return this.state?.uploadedImageUrl as string;
+  }
+
+  setPosterR2Url(r2Url: string) {
+    const imageUrl = `${this.env.PUBLIC_POSTERS_HOST}/${r2Url.replace(
+      "r2://posters/",
+      ""
+    )}`;
+    this.setState({
+      posterR2Url: r2Url,
+      imageUrl,
+      ...(this.state as PosterState),
+    });
+  }
+
   getPublicPosterUrl(): string | undefined {
-    const url = this.state?.imageUrl;
+    // TODO: Use the new one if it exists
+    if (this.state?.imageUrl) {
+      return this.state.imageUrl;
+    }
+    // Hasn't been transformed yet
+    const url = this.state?.uploadedImageUrl;
     if (!url) return;
     let publicUrl = url;
-    if (url.startsWith("r2://")) {
-      publicUrl = `${this.env.PUBLIC_POSTER_HOST}/${url.replace("r2://", "")}`;
+    if (url.startsWith("r2://uploads/")) {
+      publicUrl = `${this.env.PUBLIC_UPLOADS_HOST}/${url.replace(
+        "r2://uploads/",
+        ""
+      )}`;
     }
     return publicUrl;
   }

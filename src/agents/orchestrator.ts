@@ -20,6 +20,10 @@ export type OrchestratorState = {
 
 export class Orchestrator extends Agent<Env, OrchestratorState> {
   private _cachedPosterStubsByName: Map<string, DurableObjectStub<PosterAgent>>;
+  initialState = {
+    posters: []
+  }
+
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.sql`CREATE TABLE IF NOT EXISTS poster_submissions (
@@ -47,6 +51,20 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
     // Add to local temporary cache
     this._cachedPosterStubsByName.set(name, poster);
     return poster;
+  }
+
+  async onPosterChange(name: string) {
+    const posterSummaries = this.state?.posters as PosterSummary[];
+    const posterSummary = posterSummaries?.find(p => p.id === name);
+    if (posterSummary) {                                                                                      
+      const poster = await getAgentByName(this.env.PosterAgent, name);
+      posterSummary.imageUrl = await poster.getPublicPosterUrl() as string;
+    }
+    this.setState({...this.state as OrchestratorState, posters: posterSummaries});
+  }
+
+  async onTrackListen(spotifyUserName: string, posterAgentName: string, trackUri: string) {
+    console.log({spotifyUserName, posterAgentName, trackUri});
   }
 
 
@@ -149,13 +167,18 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
     // Update poster record to the generated slug
     const slug = (await posterAgent.getSlug()) as string;
     this.sql`UPDATE poster_submissions SET slug=${slug} WHERE id=${id}`;
-    const state = this.state || { posters: [] };
+    const state = this.state as OrchestratorState;
+    // TODO: How to update this? temporary refresh?
     state.posters.push({
       id,
       slug,
       imageUrl: (await posterAgent.getPublicPosterUrl()) as string,
     });
     this.setState(state);
+    console.log("Kicking off Image Normalizer");
+    await this.env.IMAGE_NORMALIZER.create({params: {
+      posterAgentName: id.toString(),
+    }});
     console.log("Kicking off Researcher");
     await this.env.SPOTIFY_RESEARCHER.create({
       params: {
