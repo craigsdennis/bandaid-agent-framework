@@ -32,6 +32,16 @@ export default function User({ id }) {
       event: "playlist.check"
     }))
   }
+
+  async function removeCurrentUser(e: FormEvent) {
+    e.preventDefault();
+
+    agent.send(JSON.stringify({
+      event: "delete.user",
+      spotifyUserId: id
+    }))
+  }
+  
   
   return (
   <Layout>
@@ -39,6 +49,7 @@ export default function User({ id }) {
       <form>
         <button onClick={getRecentTracks}>Get Recent Tracks</button>
         <button onClick={runRecentPlaylistCheck}>Run Playlist Checks</button>
+        <button onClick={removeCurrentUser}>Remove SpotifyUserAgent record for {id}</button>
 
       </form>
   </Layout>

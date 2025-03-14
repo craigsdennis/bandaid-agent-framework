@@ -65,6 +65,8 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
 
   async onTrackListen(spotifyUserName: string, posterAgentName: string, trackUri: string) {
     console.log({spotifyUserName, posterAgentName, trackUri});
+    const poster = await this.getExistingPosterByName(posterAgentName);
+    await poster.trackListener(spotifyUserName);
   }
 
 
@@ -122,6 +124,10 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
           playlistId
         }))
         break;
+      case "delete.user":
+        const userAgent = await getAgentByName(this.env.SpotifyUserAgent, payload.spotifyUserName);
+        await userAgent.destroy();
+        break;
       default:
         connection.send(
           JSON.stringify({
@@ -136,7 +142,7 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
     connection: Connection,
     ctx: ConnectionContext
   ): void | Promise<void> {
-    connection.send("Hey there, I'm the orchestrator");
+    connection.send(JSON.stringify({message: "Hey there, I'm the orchestrator"}));
   }
 
   async getPosterIdFromSlug(slug: string): Promise<string> {

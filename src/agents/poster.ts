@@ -69,6 +69,16 @@ export class PosterAgent extends Agent<Env, PosterState> {
   );`;
   }
 
+  async trackListener(spotifyUserId: string) {
+    const rows = this.sql`SELECT listen_count FROM listeners WHERE spotify_user_id=${spotifyUserId}`;
+    if (rows.length === 0) {
+      this.sql`INSERT INTO listeners (spotify_user_id, listen_count) VALUES (${spotifyUserId}, 0);`;
+    } else {
+      const currentCount = rows[0].listen_count as number;
+      this.sql`UPDATE listeners SET listen_count=${currentCount + 1} WHERE spotify_user_id=${spotifyUserId}`;
+    }
+  }
+
   async initialize(url: string) {
     let imageUrl = url;
     if (url.startsWith("r2://uploads/")) {

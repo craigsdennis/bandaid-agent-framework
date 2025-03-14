@@ -11,8 +11,7 @@ import {
   SpotifyApi,
   type UserProfile,
 } from "@spotify/web-api-ts-sdk";
-import type { AgentContext } from "agents-sdk";
-import { match } from "assert";
+import { type AgentContext } from "agents-sdk";
 
 export type SpotifyUserState = {
   expires: number;
@@ -46,7 +45,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );`;
     this.sql`CREATE TABLE IF NOT EXISTS recently_played_check_log (
-            id INTEGER AUTO INCREMENT PRIMARY KEY,
+            id INTEGER AUTOx INCREMENT PRIMARY KEY,
             total_recent INTEGER,
             total_matches_found INTEGER,
             total_watched_at_time_of_check INTEGER,
@@ -79,6 +78,14 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
           })
         );
         break;
+      case "delete.user":
+        const userAgent = await getAgentByName(
+          this.env.SpotifyUserAgent,
+          payload.spotifyUserName
+        );
+        await userAgent.destroy();
+        break;
+
       default:
         console.warn("Unhandled event", payload.event);
         break;
@@ -89,10 +96,10 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     const loggedInAt = Date.now().valueOf();
     let expires = tokenResult.expires;
     if (expires === undefined) {
-        console.log("Expires in", tokenResult.expires_in);
-      expires = loggedInAt + (tokenResult.expires_in * 1000);
+      console.log("Expires in", tokenResult.expires_in);
+      expires = loggedInAt + tokenResult.expires_in * 1000;
     }
-    console.log('Setting expires', expires, loggedInAt);
+    console.log("Setting expires", expires, loggedInAt);
     const state = {
       ...profile,
       expires,
@@ -105,12 +112,15 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
   addToken(token: AccessToken) {
     const loggedInAt = Date.now().valueOf();
     let expires = token.expires;
-    console.log({token});
+    console.log({ token });
     if (expires === undefined) {
       expires = loggedInAt + token.expires_in;
     }
-    this.sql`INSERT INTO tokens (token_json) VALUES (${JSON.stringify(token)})`;
-    this.setState({...this.state as SpotifyUserState, expires, loggedInAt});
+    this
+      .sql`INSERT INTO tokens (token_json, refresh_token) VALUES (${JSON.stringify(
+      token
+    )}, ${token.refresh_token});`;
+    this.setState({ ...(this.state as SpotifyUserState), expires, loggedInAt });
   }
 
   async getCurrentToken(): Promise<AccessToken> {
@@ -120,15 +130,25 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     return JSON.parse(tokenJSON);
   }
 
+  async getCurrentRefreshToken(): Promise<string> {
+    const rows = this.sql`SELECT 
+      refresh_token from tokens 
+    WHERE 
+      refresh_token IS NOT NULL 
+    ORDER BY created_at DESC LIMIT 1`;
+    const refreshToken = rows[0].refresh_token as string;
+    return refreshToken;
+  }
+
   async refreshToken(): Promise<AccessToken> {
     console.log("Refreshing token");
-    const currentToken = await this.getCurrentToken();
-    console.log({currentToken});
+    const currentRefreshToken = await this.getCurrentRefreshToken();
+    console.log({ currentRefreshToken });
     const creds =
       this.env.SPOTIFY_CLIENT_ID + ":" + this.env.SPOTIFY_CLIENT_SECRET;
     const form = new URLSearchParams({
       grant_type: "refresh_token",
-      refresh_token: currentToken.refresh_token,
+      refresh_token: currentRefreshToken,
       client_id: this.env.SPOTIFY_CLIENT_ID,
     });
     const response = await fetch("https://accounts.spotify.com/api/token", {
@@ -208,8 +228,9 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     console.log("Getting authenticated SDK");
     const state = this.state as SpotifyUserState;
     let accessToken: AccessToken;
-    console.log({expires: state.expires, now: Date.now().valueOf()});
+    console.log({ expires: state.expires, now: Date.now().valueOf() });
     if (state.expires < Date.now().valueOf()) {
+      console.log("Refreshing token");
       accessToken = await this.refreshToken();
     } else {
       accessToken = await this.getCurrentToken();
