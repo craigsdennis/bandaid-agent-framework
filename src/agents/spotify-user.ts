@@ -12,20 +12,25 @@ import {
   type UserProfile,
 } from "@spotify/web-api-ts-sdk";
 import { type AgentContext } from "agents-sdk";
+import { arrayBuffer } from "stream/consumers";
+
+export type PlaylistSummary = {
+  url: string;
+  title: string;
+};
 
 export type SpotifyUserState = {
   expires: number;
   loggedInAt: number;
-  playlistUrls?: string[];
+  playlists?: PlaylistSummary[];
 } & UserProfile;
 
 export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
+  initial_state = {
+    playlists: [],
+  };
   constructor(ctx: AgentContext, env: Env) {
     super(ctx, env);
-    this.sql`CREATE TABLE IF NOT EXISTS playlists (
-            id VARCHAR(255) PRIMARY KEY,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );`;
     this.sql`CREATE TABLE IF NOT EXISTS watched_tracks (
             id INTEGER AUTO INCREMENT PRIMARY KEY,
             uri VARCHAR(255) NOT NULL,
@@ -247,8 +252,9 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     const trackUris = await posterAgent.getTrackUris();
     const state = this.state as SpotifyUserState;
     const userId = state.id as string;
+    const playlistTitle = `BandAid / ${tourName}`;
     const playlist = await sdk.playlists.createPlaylist(userId, {
-      name: `BandAid / ${tourName}`,
+      name: playlistTitle,
       description: `A BandAid playlist featuring songs from ${bandNames?.join(
         ", "
       )}`,
@@ -261,8 +267,50 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
         this
           .sql`INSERT INTO watched_tracks (uri, poster_id) VALUES (${uri}, ${posterId});`
     );
-    state.playlistUrls = state.playlistUrls || [];
-    state.playlistUrls.push(playlist.external_urls.spotify);
+    const r2Key = await posterAgent.getPosterR2Key();
+    const obj = await this.env.POSTERS.get(r2Key);
+    if (obj) {
+      console.log(`Transforming ${r2Key}`);
+      const image = await this.env.IMAGES.input(obj.body)
+        .transform({ width: 300 })
+        .transform({ height: 300 })
+        .transform({fit: "scale-down"})
+        .output({ format: "image/jpeg" });
+      const reader = image.image().getReader();
+      const buffers: Buffer[] = [];
+
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) {
+            break;
+          }
+          // Convert each Uint8Array chunk into a Buffer
+          buffers.push(Buffer.from(value));
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      // Combine all Buffers into one
+      const combinedBuffer = Buffer.concat(buffers);
+
+      // Convert to Base64
+      const imageBase64 = combinedBuffer.toString("base64");
+      await sdk.playlists.addCustomPlaylistCoverImageFromBase64String(
+        playlist.id,
+        imageBase64
+      );
+    }
+
+    if (state.playlists === undefined) {
+      state.playlists = [];
+    }
+    
+    state.playlists.push({
+      url: playlist.external_urls.spotify,
+      title: playlistTitle,
+    });
     this.setState(state);
     return playlist.id;
   }

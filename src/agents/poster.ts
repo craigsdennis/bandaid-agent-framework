@@ -169,6 +169,10 @@ export class PosterAgent extends Agent<Env, PosterState> {
     return this.state?.uploadedImageUrl as string;
   }
 
+  getPosterR2Key() {
+    return this.state.posterR2Url?.replace("r2://posters/", "");
+  }
+
   setPosterR2Url(r2Url: string) {
     const imageUrl = `${this.env.PUBLIC_POSTERS_HOST}/${r2Url.replace(
       "r2://posters/",

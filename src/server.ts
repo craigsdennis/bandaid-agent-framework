@@ -18,7 +18,7 @@ app.use("*", agentsMiddleware());
 app.get("/spotify/login", async (c) => {
   const state = crypto.randomUUID();
   const scope =
-    "playlist-read-collaborative playlist-modify-public user-read-recently-played";
+    "playlist-read-collaborative playlist-modify-public user-read-recently-played playlist-modify-private ugc-image-upload";
   const url = new URL(c.req.url);
   url.pathname = "/spotify/callback";
 

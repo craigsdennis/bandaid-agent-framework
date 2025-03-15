@@ -5,7 +5,6 @@ import Poster from "./front-end/pages/poster";
 import User from "./front-end/pages/user";
 
 const url = new URL(window.location.href);
-console.log({url});
 const root = createRoot(document.getElementById("app")!);
 
 // Replace with the routing system of your choice!

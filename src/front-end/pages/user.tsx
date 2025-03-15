@@ -3,7 +3,7 @@ import type { SpotifyUserState } from "../../agents/spotify-user";
 import type { FormEvent } from "react";
 import Layout from "../Layout";
 
-export default function User({ id }) {
+export default function User({ id }: {id: string}) {
   const agent = useAgent({
     agent: "spotify-user-agent",
     name: id,
@@ -13,7 +13,7 @@ export default function User({ id }) {
     onMessage: (message) => {
         console.log({message});
         const payload = JSON.parse(message.data);
-        console.log({payload})
+        console.log({payload});
     }
 
   });

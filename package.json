@@ -32,7 +32,7 @@
     "@ai-sdk/react": "^1.1.17",
     "@cloudflare/puppeteer": "^0.0.14",
     "@spotify/web-api-ts-sdk": "^1.2.0",
-    "agents-sdk": "^0.0.34",
+    "agents-sdk": "^0.0.35",
     "ai": "^4.1.45",
     "hono": "^4.7.2",
     "hono-agents": "^0.0.1",
