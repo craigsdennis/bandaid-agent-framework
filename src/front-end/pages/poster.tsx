@@ -4,16 +4,16 @@ import { useState, type FormEvent } from "react";
 import SpotifyArtist from "../components/spotify-artist";
 import SpotifyLoggedIn from "../components/spotify-logged-in";
 import type { ReactFormState } from "react-dom/client";
-import type { PosterState } from "../../agents/poster";
+import type { PosterState, SpotifyArtistSummary } from "../../agents/poster";
 import Layout from "../Layout";
 
 
-function summaryFor(poster: PosterState, bandName: string) {
-  if (poster.spotifyArtistSummaries === undefined) return;
+function summaryFor(poster: PosterState, bandName: string): SpotifyArtistSummary | undefined {
+  if (poster.spotifyArtistSummaries === undefined) return undefined;
   return poster.spotifyArtistSummaries.find((p) => p.name === bandName);
 }
 
-export default function Poster({ id }) {
+export default function Poster({ id }: {id: string}) {
   const [poster, setPoster] = useState<PosterState>();
   
   const agent = useAgent({

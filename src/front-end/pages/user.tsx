@@ -1,19 +1,26 @@
 import { useAgent } from "agents-sdk/react";
 import type { SpotifyUserState } from "../../agents/spotify-user";
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import Layout from "../Layout";
 
 export default function User({ id }: {id: string}) {
+  const [spotifyUser, setSpotifyUser] = useState<SpotifyUserState>();
+  
   const agent = useAgent({
     agent: "spotify-user-agent",
     name: id,
     onStateUpdate: (state: SpotifyUserState) => {
-        console.log({state});
+      console.log({state});
+      setSpotifyUser(state);
     },
     onMessage: (message) => {
         console.log({message});
-        const payload = JSON.parse(message.data);
-        console.log({payload});
+        try {
+          const payload = JSON.parse(message.data);
+          console.log({payload});
+        } catch(err) {
+          // Not JSON
+        }
     }
 
   });
@@ -45,7 +52,12 @@ export default function User({ id }: {id: string}) {
   
   return (
   <Layout>
-      <h1>User {id} </h1>;
+      <h1>User {id} </h1>
+      {spotifyUser?.playlists?.map(playlist => {
+        <a href={playlist.url}>{playlist.title}</a>
+      })}
+
+      <h2>Admin</h2>
       <form>
         <button onClick={getRecentTracks}>Get Recent Tracks</button>
         <button onClick={runRecentPlaylistCheck}>Run Playlist Checks</button>

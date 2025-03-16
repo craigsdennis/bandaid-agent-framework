@@ -1,9 +1,9 @@
 import type { SpotifyArtistSummary } from "../../agents/poster";
 
-export default function SpotifyArtist({ summary }: {summary: SpotifyArtistSummary}) {
+export default function SpotifyArtist({ summary }: {summary?: SpotifyArtistSummary}) {
     if (summary === undefined) {
         return (
-            <p>...</p>
+            <p>🤷‍♂️</p>
         )
     }
     return (

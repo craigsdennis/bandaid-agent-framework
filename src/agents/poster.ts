@@ -18,7 +18,7 @@ const EventSchema = z.object({
     description: "The name of the city where this is happening",
   }),
   date: z.string({
-    description: "The date and time when this is happening in ISO 9601 format",
+    description: "The date and time when this is happening in ISO 9601 format. Determine year based on day of the week and date if year is not provided.",
   }),
   isUpcoming: z.boolean({
     description:

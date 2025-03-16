@@ -20,15 +20,17 @@ export type PlaylistSummary = {
 };
 
 export type SpotifyUserState = {
+  id: string;
+  displayName: string;
+  url: string;
+  email: string;
   expires: number;
   loggedInAt: number;
   playlists?: PlaylistSummary[];
-} & UserProfile;
+};
 
 export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
-  initial_state = {
-    playlists: [],
-  };
+  
   constructor(ctx: AgentContext, env: Env) {
     super(ctx, env);
     this.sql`CREATE TABLE IF NOT EXISTS watched_tracks (
@@ -56,13 +58,6 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
             total_watched_at_time_of_check INTEGER,
             run_completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );`;
-  }
-
-  onConnect(
-    connection: Connection,
-    ctx: ConnectionContext
-  ): void | Promise<void> {
-    console.log("A client has connected");
   }
 
   async onMessage(connection: Connection, message: WSMessage): Promise<void> {
@@ -97,16 +92,24 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     }
   }
 
+  asExpireMilliseconds(expiresInSeconds: number) {
+    // Spotify passes seconds
+    const now = Date.now().valueOf();
+    return now + (expiresInSeconds * 1000);
+  }
+
   async initialize(profile: UserProfile, tokenResult: AccessToken) {
     const loggedInAt = Date.now().valueOf();
     let expires = tokenResult.expires;
     if (expires === undefined) {
-      console.log("Expires in", tokenResult.expires_in);
-      expires = loggedInAt + tokenResult.expires_in * 1000;
+      expires = this.asExpireMilliseconds(tokenResult.expires_in);
     }
     console.log("Setting expires", expires, loggedInAt);
     const state = {
-      ...profile,
+      id: profile.id,
+      displayName: profile.display_name,
+      email: profile.email,
+      url: profile.external_urls.spotify,
       expires,
       loggedInAt,
     };
@@ -117,15 +120,17 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
   addToken(token: AccessToken) {
     const loggedInAt = Date.now().valueOf();
     let expires = token.expires;
-    console.log({ token });
     if (expires === undefined) {
-      expires = loggedInAt + token.expires_in;
+      expires = this.asExpireMilliseconds(token.expires_in);
     }
     this
       .sql`INSERT INTO tokens (token_json, refresh_token) VALUES (${JSON.stringify(
       token
     )}, ${token.refresh_token});`;
-    this.setState({ ...(this.state as SpotifyUserState), expires, loggedInAt });
+    const state = this.state as SpotifyUserState;
+    state.expires = expires;
+    state.loggedInAt = loggedInAt
+    this.setState(state);
   }
 
   async getCurrentToken(): Promise<AccessToken> {

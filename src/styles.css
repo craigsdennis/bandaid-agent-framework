@@ -143,7 +143,7 @@ h2 {
 }
 
 h2:before {
-  content: '♪';
+  content: '';
   position: absolute;
   left: -1.5rem;
   top: 50%;
@@ -160,7 +160,7 @@ h3 {
 }
 
 h3:after {
-  content: '●';
+  content: '🎸';
   position: absolute;
   left: -1.5rem;
   font-size: 1rem;
