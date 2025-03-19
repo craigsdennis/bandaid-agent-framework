@@ -1,4 +1,4 @@
-import { getAgentByName } from "agents-sdk";
+import { getAgentByName } from "agents";
 
 import { Orchestrator } from "./agents/orchestrator";
 import { PosterAgent } from "./agents/poster";
