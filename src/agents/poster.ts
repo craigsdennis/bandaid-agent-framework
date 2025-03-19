@@ -5,7 +5,7 @@ import {
   type Connection,
   type ConnectionContext,
   type WSMessage,
-} from "agents-sdk";
+} from "agents";
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod.mjs";
 import { z } from "zod";
@@ -56,6 +56,7 @@ export type PosterState = {
   uploadedImageUrl: string;
   imageUrl?: string;
   posterR2Url?: string;
+  listenCount?: number;
   spotifyArtistSummaries?: SpotifyArtistSummary[];
 } & PosterMetadata;
 
@@ -77,6 +78,8 @@ export class PosterAgent extends Agent<Env, PosterState> {
       const currentCount = rows[0].listen_count as number;
       this.sql`UPDATE listeners SET listen_count=${currentCount + 1} WHERE spotify_user_id=${spotifyUserId}`;
     }
+    const [row] = this.sql`SELECT SUM(listen_count) from listeners`;
+    this.setState({...this.state as PosterState, listenCount: row.listen_count as number})
   }
 
   async initialize(url: string) {

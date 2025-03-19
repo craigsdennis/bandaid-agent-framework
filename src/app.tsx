@@ -1,4 +1,4 @@
-import { useAgent } from "agents-sdk/react";
+import { useAgent } from "agents/react";
 import { useState } from "react";
 import type { OrchestratorState, PosterSummary } from "./agents/orchestrator";
 import Layout from "./front-end/Layout";

@@ -5,7 +5,7 @@ import { WorkflowEntrypoint, type WorkflowEvent, WorkflowStep } from 'cloudflare
 import { zodResponseFormat } from "openai/helpers/zod.mjs";
 import { z } from "zod";
 import OpenAI from 'openai';
-import { getAgentByName } from 'agents-sdk';
+import { getAgentByName } from 'agents';
 
 type NormalizerParams = {
 	posterAgentName: string;

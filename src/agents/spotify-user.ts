@@ -11,8 +11,8 @@ import {
   SpotifyApi,
   type UserProfile,
 } from "@spotify/web-api-ts-sdk";
-import { type AgentContext } from "agents-sdk";
-import { arrayBuffer } from "stream/consumers";
+import { type AgentContext } from "agents";
+
 
 export type PlaylistSummary = {
   url: string;
@@ -194,6 +194,54 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     return uris;
   }
 
+  async scheduleNextListenCheck(override = false) {
+    const callbackString = "runRecentPlaylistListenChecks";
+    let schedule = this.getSchedules()
+      .find(sched => sched.callback === callbackString);
+    let scheduleDate;
+    if (schedule && override) {
+      console.log("Overriding existing run schedule", schedule);
+      this.cancelSchedule(schedule.id);
+    } else if (schedule) {
+      console.warn("Existing run schedule found", schedule);
+      console.log("Not overriding schedule")
+      return;
+    }
+    // Default timing is 12 hours
+    const MAX_INTERVAL = (12 * 60 * 60 * 1000);
+    const defaultDate = new Date();
+    defaultDate.setTime(defaultDate.getTime() + MAX_INTERVAL);
+    scheduleDate = defaultDate;
+    // Use results from prior runs
+    const latestRuns = this.sql`SELECT * FROM recently_played_check_log ORDER BY run_completed_at DESC limit 2`;
+    const [latestRun, penultimateRun] = latestRuns;
+    if (penultimateRun) {
+      let checkInterval = new Date(latestRun.run_completed_at).getTime() - new Date(penultimateRun.run_completed_at).getTime();
+      console.log("Latest check interval was", checkInterval);
+      // If we are getting close to not having enough time
+      if (latestRun.total_recent >= 40) {
+        // Half it
+        checkInterval = checkInterval * 0.50;
+      } else if (latestRun.total_recent < 20) {
+        // Wait a little longer
+        checkInterval = Math.max(MAX_INTERVAL, checkInterval * 1.25);
+      }
+      // If 50% of listens are to watched bands, they are big users of the app, refresh more frequently.
+      if (latestRun.total_matches_found / latestRun.total_watched_at_time_of_check >= .5) {
+        checkInterval = checkInterval * .5;
+      }
+      const now = new Date();
+      now.setTime(now.getTime() + checkInterval);
+      scheduleDate = now;
+      console.log("Adaptive schedule", now, checkInterval, scheduleDate);
+    }
+    if (scheduleDate) {
+      schedule = await this.schedule(scheduleDate, callbackString, {});
+    } else {
+      console.warn("Schedule not set");
+    }
+  } 
+
   async runRecentPlaylistListensCheck(): Promise<string[]> {
     const rows = this
       .sql`SELECT run_completed_at FROM recently_played_check_log ORDER BY run_completed_at DESC LIMIT 1;`;
@@ -227,8 +275,11 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     this.sql`INSERT INTO recently_played_check_log 
         (total_recent, total_matches_found, total_watched_at_time_of_check) VALUES
          (${recentTrackUris.length}, ${matchedUris.length}, ${watchedTrackUris.length});`;
+    console.log('Scheduling next listen check run adaptively');
+    await this.scheduleNextListenCheck(true);
     return matchedUris;
   }
+
   async getWatchedTrackUris(): Promise<string[]> {
     const rows = this.sql`SELECT uri FROM watched_tracks;`;
     return rows.map((row) => row.uri);

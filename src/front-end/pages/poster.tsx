@@ -1,9 +1,8 @@
-import { useAgent } from "agents-sdk/react";
-import { AgentClient } from "agents-sdk/client";
+import { useAgent } from "agents/react";
+import { AgentClient } from "agents/client";
 import { useState, type FormEvent } from "react";
 import SpotifyArtist from "../components/spotify-artist";
 import SpotifyLoggedIn from "../components/spotify-logged-in";
-import type { ReactFormState } from "react-dom/client";
 import type { PosterState, SpotifyArtistSummary } from "../../agents/poster";
 import Layout from "../Layout";
 

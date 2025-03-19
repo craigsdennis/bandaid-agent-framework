@@ -1,15 +1,15 @@
-import { useAgent } from "agents-sdk/react";
+import { useAgent } from "agents/react";
 import type { SpotifyUserState } from "../../agents/spotify-user";
 import { useState, type FormEvent } from "react";
 import Layout from "../Layout";
 
 export default function User({ id }: {id: string}) {
-  const [spotifyUser, setSpotifyUser] = useState<SpotifyUserState>();
+  const [spotifyUser, setSpotifyUser] = useState<SpotifyUserState>({});
   
   const agent = useAgent({
     agent: "spotify-user-agent",
     name: id,
-    onStateUpdate: (state: SpotifyUserState) => {
+    onStateUpdate: (state: SpotifyUserState, source) => {
       console.log({state});
       setSpotifyUser(state);
     },
@@ -53,6 +53,7 @@ export default function User({ id }: {id: string}) {
   return (
   <Layout>
       <h1>User {id} </h1>
+      <p>{spotifyUser?.displayName} is available at {spotifyUser?.email}</p>
       {spotifyUser?.playlists?.map(playlist => {
         <a href={playlist.url}>{playlist.title}</a>
       })}
