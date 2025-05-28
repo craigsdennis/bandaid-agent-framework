@@ -1,5 +1,4 @@
-@import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Anton&family=Bebas+Neue&family=Rock+Salt&display=swap');
+@import 'tailwindcss';
 
 :root {
   --color-background: #121212;
