@@ -24,20 +24,16 @@ export default function User({ id }: {id: string}) {
     }
 
   });
-  const getRecentTracks = (e: FormEvent) => {
+  const getRecentTracks = async (e: FormEvent) => {
     e.preventDefault();
     const since = Date.now().valueOf() - (24 * 60 * 60 * 1000);
-    agent.send(JSON.stringify({
-        event: "tracks.recent",
-        since
-    }))
+    const results = await agent.call("getRecentTrackUris", [since]);
+    console.log(results);
   }
   async function runRecentPlaylistCheck(e: FormEvent) {
     e.preventDefault();
 
-    agent.send(JSON.stringify({
-      event: "playlist.check"
-    }))
+    const result = await agent.call("runRecentPlaylistListensCheck");
   }
 
   async function removeCurrentUser(e: FormEvent) {

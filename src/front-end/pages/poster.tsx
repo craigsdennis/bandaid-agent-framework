@@ -6,15 +6,17 @@ import SpotifyLoggedIn from "../components/spotify-logged-in";
 import type { PosterState, SpotifyArtistSummary } from "../../agents/poster";
 import Layout from "../Layout";
 
-
-function summaryFor(poster: PosterState, bandName: string): SpotifyArtistSummary | undefined {
+function summaryFor(
+  poster: PosterState,
+  bandName: string
+): SpotifyArtistSummary | undefined {
   if (poster.spotifyArtistSummaries === undefined) return undefined;
   return poster.spotifyArtistSummaries.find((p) => p.name === bandName);
 }
 
-export default function Poster({ id }: {id: string}) {
+export default function Poster({ id }: { id: string }) {
   const [poster, setPoster] = useState<PosterState>();
-  
+
   const agent = useAgent({
     agent: "poster-agent",
     name: id,
@@ -25,22 +27,17 @@ export default function Poster({ id }: {id: string}) {
     },
   });
 
-  const handlePlaylistRequest = (formData: FormData) => {
-    
+  const handlePlaylistRequest = async (formData: FormData) => {
     const orchestratorClient = new AgentClient({
-        host: window.location.host,
-        agent: "orchestrator",
-        name: "main"
+      host: window.location.host,
+      agent: "orchestrator",
+      name: "main",
     });
-    orchestratorClient.send(JSON.stringify({
-        event: "poster.playlist.create",
-        posterId: formData.get("poster_id"),
-        spotifyUserId: formData.get("spotify_user_id")
-    }));
-    orchestratorClient.addEventListener("message", (message) => {
-        console.log("Orchestrator message", message);
-    })
-  }
+    await orchestratorClient.call("createPlaylistForSpotifyUser", [
+      formData.get("poster_id"),
+      formData.get("spotify_user_id"),
+    ]);
+  };
 
   return (
     <Layout>
@@ -48,13 +45,18 @@ export default function Poster({ id }: {id: string}) {
       <img src={poster?.imageUrl} />
       <h2>When</h2>
       {poster?.events.map((event) => (
-        <p key={event.date}>{event.venue} - {event.location} - {event.date}</p>
+        <p key={event.date}>
+          {event.venue} - {event.location} - {event.date}
+        </p>
       ))}
       <h2>Who's playing?</h2>
       {poster?.bandNames.map((bandName) => (
         <>
           <h3>{bandName}</h3>
-          <SpotifyArtist key={bandName} summary={summaryFor(poster, bandName)} />
+          <SpotifyArtist
+            key={bandName}
+            summary={summaryFor(poster, bandName)}
+          />
         </>
       ))}
       <SpotifyLoggedIn handler={handlePlaylistRequest}>

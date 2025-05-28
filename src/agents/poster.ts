@@ -86,7 +86,6 @@ export class PosterAgent extends Agent<Env, PosterState> {
     let imageUrl = url;
     if (url.startsWith("r2://uploads/")) {
       const key = url.replace("r2://uploads/", "");
-      // BAND_AID is the r2 bucket
       const fileUpload = await this.env.UPLOADS.get(key);
       if (fileUpload === null) {
         return;
@@ -189,7 +188,7 @@ export class PosterAgent extends Agent<Env, PosterState> {
   }
 
   getPublicPosterUrl(): string | undefined {
-    // TODO: Use the new one if it exists
+    // Use the new one if it exists
     if (this.state?.imageUrl) {
       return this.state.imageUrl;
     }
@@ -205,6 +204,4 @@ export class PosterAgent extends Agent<Env, PosterState> {
     }
     return publicUrl;
   }
-
-  onMessage(connection: Connection, message: WSMessage): void | Promise<void> {}
 }

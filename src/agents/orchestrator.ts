@@ -5,6 +5,7 @@ import {
   type Connection,
   type ConnectionContext,
   type WSMessage,
+  unstable_callable as callable
 } from "agents";
 import type { PosterAgent } from "./poster";
 
@@ -78,6 +79,23 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
   //   this.broadcast("State updated (using broadcast)");
   // }
 
+  @callable()
+  async deleteAllPosters() {
+    const rows = this.sql<{
+      id: string;
+    }>`SELECT id from poster_submissions;`;
+    console.log(`There are ${rows.length} posters to delete`);
+    for (const row of rows) {
+      console.log(`Getting ${row.id}`);
+      const posterAgent = await this.getExistingPosterByName(row.id);
+      console.log(`Destroying poster ${row.id}`);
+      await posterAgent.destroy();
+    }
+    this.sql`DELETE FROM poster_submissions;`;
+    this.setState({ ...this.state, posters: [] });
+    return true;
+  }
+
   async onMessage(connection: Connection, message: WSMessage): Promise<void> {
     console.log({message});
     const payload = JSON.parse(message.toString());
@@ -92,37 +110,6 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
             state: this.state,
           })
         );
-        break;
-      case "add.poster":
-        console.log(`Submitting ${payload.url}`);
-        await this.submitPoster(payload.url); 
-        break;
-      case "delete.posters.all":
-        const rows = this.sql<{
-          id: string;
-        }>`SELECT id from poster_submissions;`;
-        console.log(`There are ${rows.length} posters to delete`);
-        for (const row of rows) {
-          console.log(`Getting ${row.id}`);
-          const posterAgent = await this.getExistingPosterByName(row.id);
-          console.log(`Destroying poster ${row.id}`);
-          await posterAgent.destroy();
-        }
-        this.sql`DELETE FROM poster_submissions;`;
-        this.setState({ ...this.state, posters: [] });
-        connection.send(
-          JSON.stringify({
-            event: "delete.posters",
-            success: true,
-          })
-        );
-        break;
-      case "poster.playlist.create":
-        const playlistId = await this.createPlaylistForSpotifyUser(payload.posterId, payload.spotifyUserId);
-        connection.send(JSON.stringify({
-          event: "poster.playlist.created",
-          playlistId
-        }))
         break;
       case "delete.user":
         const userAgent = await getAgentByName(this.env.SpotifyUserAgent, payload.spotifyUserName);
@@ -151,6 +138,7 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
     return id[0];
   }
 
+  @callable()
   async createPlaylistForSpotifyUser(posterId: string, spotifyUserId: string) {
     const spotifyUserAgent = await getAgentByName(
       this.env.SpotifyUserAgent,
@@ -163,6 +151,7 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
     return playlistId;
   }
 
+  @callable()
   async submitPoster(url: string) {
     // INSERT submission
     const id = crypto.randomUUID();

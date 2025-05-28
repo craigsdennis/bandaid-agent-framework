@@ -2,17 +2,15 @@ import {
   Agent,
   getAgentByName,
   type Connection,
-  type ConnectionContext,
   type WSMessage,
-} from "@cloudflare/agents";
+  type AgentContext,
+  unstable_callable as callable,
+} from "agents";
 import {
   type AccessToken,
-  type Playlist,
   SpotifyApi,
   type UserProfile,
 } from "@spotify/web-api-ts-sdk";
-import { type AgentContext } from "agents";
-
 
 export type PlaylistSummary = {
   url: string;
@@ -30,7 +28,6 @@ export type SpotifyUserState = {
 };
 
 export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
-  
   constructor(ctx: AgentContext, env: Env) {
     super(ctx, env);
     this.sql`CREATE TABLE IF NOT EXISTS watched_tracks (
@@ -63,10 +60,6 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
   async onMessage(connection: Connection, message: WSMessage): Promise<void> {
     const payload = JSON.parse(message.toString());
     switch (payload.event) {
-      case "tracks.recent":
-        const recentTrackUris = await this.getRecentTrackUris(payload.since);
-        connection.send(JSON.stringify({ recentTrackUris }));
-        break;
       case "playlist.check":
         const runResults = await this.runRecentPlaylistListensCheck();
         const allRuns = this
@@ -95,7 +88,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
   asExpireMilliseconds(expiresInSeconds: number) {
     // Spotify passes seconds
     const now = Date.now().valueOf();
-    return now + (expiresInSeconds * 1000);
+    return now + expiresInSeconds * 1000;
   }
 
   async initialize(profile: UserProfile, tokenResult: AccessToken) {
@@ -129,7 +122,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     )}, ${token.refresh_token});`;
     const state = this.state as SpotifyUserState;
     state.expires = expires;
-    state.loggedInAt = loggedInAt
+    state.loggedInAt = loggedInAt;
     this.setState(state);
   }
 
@@ -174,6 +167,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     return updatedTokenResult;
   }
 
+  @callable()
   async getRecentTrackUris(since: number): Promise<string[]> {
     const sdk = await this.getSdk();
     let cursor: number = since;
@@ -196,39 +190,47 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
 
   async scheduleNextListenCheck(override = false) {
     const callbackString = "runRecentPlaylistListenChecks";
-    let schedule = this.getSchedules()
-      .find(sched => sched.callback === callbackString);
+    let schedule = this.getSchedules().find(
+      (sched) => sched.callback === callbackString
+    );
     let scheduleDate;
     if (schedule && override) {
       console.log("Overriding existing run schedule", schedule);
       this.cancelSchedule(schedule.id);
     } else if (schedule) {
       console.warn("Existing run schedule found", schedule);
-      console.log("Not overriding schedule")
+      console.log("Not overriding schedule");
       return;
     }
     // Default timing is 12 hours
-    const MAX_INTERVAL = (12 * 60 * 60 * 1000);
+    const MAX_INTERVAL = 12 * 60 * 60 * 1000;
     const defaultDate = new Date();
     defaultDate.setTime(defaultDate.getTime() + MAX_INTERVAL);
     scheduleDate = defaultDate;
     // Use results from prior runs
-    const latestRuns = this.sql`SELECT * FROM recently_played_check_log ORDER BY run_completed_at DESC limit 2`;
+    const latestRuns = this
+      .sql`SELECT * FROM recently_played_check_log ORDER BY run_completed_at DESC limit 2`;
     const [latestRun, penultimateRun] = latestRuns;
     if (penultimateRun) {
-      let checkInterval = new Date(latestRun.run_completed_at).getTime() - new Date(penultimateRun.run_completed_at).getTime();
+      let checkInterval =
+        new Date(latestRun.run_completed_at).getTime() -
+        new Date(penultimateRun.run_completed_at).getTime();
       console.log("Latest check interval was", checkInterval);
       // If we are getting close to not having enough time
       if (latestRun.total_recent >= 40) {
         // Half it
-        checkInterval = checkInterval * 0.50;
+        checkInterval = checkInterval * 0.5;
       } else if (latestRun.total_recent < 20) {
         // Wait a little longer
         checkInterval = Math.max(MAX_INTERVAL, checkInterval * 1.25);
       }
       // If 50% of listens are to watched bands, they are big users of the app, refresh more frequently.
-      if (latestRun.total_matches_found / latestRun.total_watched_at_time_of_check >= .5) {
-        checkInterval = checkInterval * .5;
+      if (
+        latestRun.total_matches_found /
+          latestRun.total_watched_at_time_of_check >=
+        0.5
+      ) {
+        checkInterval = checkInterval * 0.5;
       }
       const now = new Date();
       now.setTime(now.getTime() + checkInterval);
@@ -240,8 +242,9 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     } else {
       console.warn("Schedule not set");
     }
-  } 
+  }
 
+  @callable()
   async runRecentPlaylistListensCheck(): Promise<string[]> {
     const rows = this
       .sql`SELECT run_completed_at FROM recently_played_check_log ORDER BY run_completed_at DESC LIMIT 1;`;
@@ -252,7 +255,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
       console.log("First run going back in time", TEN_DAYS);
       since = Date.now().valueOf() - TEN_DAYS;
     } else {
-      since = new Date(rows[0].run_completed_at).valueOf();
+      since = new Date(rows[0].run_completed_at as string).valueOf();
       console.log({ since, now: Date.now().valueOf() });
     }
     const recentTrackUris = await this.getRecentTrackUris(since);
@@ -269,20 +272,20 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
       for (const row of rows) {
         this
           .sql`INSERT INTO track_listens (uri, poster_id) VALUES (${row.uri}, ${row.poster_id});`;
-        await orchestrator.onTrackListen(this.name, row.poster_id, matchedUri);
+        await orchestrator.onTrackListen(this.name, row.poster_id as string, matchedUri);
       }
     }
     this.sql`INSERT INTO recently_played_check_log 
         (total_recent, total_matches_found, total_watched_at_time_of_check) VALUES
          (${recentTrackUris.length}, ${matchedUris.length}, ${watchedTrackUris.length});`;
-    console.log('Scheduling next listen check run adaptively');
+    console.log("Scheduling next listen check run adaptively");
     await this.scheduleNextListenCheck(true);
     return matchedUris;
   }
 
   async getWatchedTrackUris(): Promise<string[]> {
     const rows = this.sql`SELECT uri FROM watched_tracks;`;
-    return rows.map((row) => row.uri);
+    return rows.map((row) => row.uri as string);
   }
 
   async getSdk() {
@@ -330,7 +333,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
       const image = await this.env.IMAGES.input(obj.body)
         .transform({ width: 300 })
         .transform({ height: 300 })
-        .transform({fit: "scale-down"})
+        .transform({ fit: "scale-down" })
         .output({ format: "image/jpeg" });
       const reader = image.image().getReader();
       const buffers: Buffer[] = [];
@@ -362,7 +365,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     if (state.playlists === undefined) {
       state.playlists = [];
     }
-    
+
     state.playlists.push({
       url: playlist.external_urls.spotify,
       title: playlistTitle,
