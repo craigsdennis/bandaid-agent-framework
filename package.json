@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "vite dev",
-    "deploy": "rm -rf dist && vite build && wrangler deploy"
+    "dev": "vite dev",
+    "deploy": "vite build && wrangler deploy"
   },
   "keywords": [
     "cloudflare",
