@@ -89,7 +89,12 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
       console.log(`Getting ${row.id}`);
       const posterAgent = await this.getExistingPosterByName(row.id);
       console.log(`Destroying poster ${row.id}`);
-      await posterAgent.destroy();
+      try {
+        // TODO: Delete from R2 first
+        await posterAgent.destroy();
+      } catch(err) {
+        console.log("Destroyed!");
+      }
     }
     this.sql`DELETE FROM poster_submissions;`;
     this.setState({ ...this.state, posters: [] });
