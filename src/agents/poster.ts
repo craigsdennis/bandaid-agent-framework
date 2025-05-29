@@ -95,6 +95,7 @@ export class PosterAgent extends Agent<Env, PosterState> {
       const base64String = Buffer.from(aBuffer).toString("base64");
       imageUrl = `data:${contentType};base64,${base64String}`;
     }
+    // TODO: Change to responses API
     const oai = new OpenAI({ apiKey: this.env.OPENAI_API_KEY });
     const completion = await oai.beta.chat.completions.parse({
       model: "gpt-4o",

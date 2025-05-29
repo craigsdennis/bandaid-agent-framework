@@ -88,8 +88,8 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
     for (const row of rows) {
       console.log(`Getting ${row.id}`);
       const posterAgent = await this.getExistingPosterByName(row.id);
-      console.log(`Destroying poster ${row.id}`);
       try {
+        console.log(`Destroying poster ${row.id}`);
         // TODO: Delete from R2 first
         await posterAgent.destroy();
       } catch(err) {

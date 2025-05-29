@@ -38,7 +38,7 @@ export class ImageNormalizer extends WorkflowEntrypoint<Env, NormalizerParams> {
 		const posterAgent = await getAgentByName(this.env.PosterAgent, event.payload.posterAgentName);
 		const uploadedImageUrl = await posterAgent.getUploadedImageUrl();
 		const slug = await posterAgent.getSlug();
-		const rotationInstructions = await step.do(`Determine image rotation needs for ${uploadedImageUrl}`, async() => {
+		const rotationInstructions = await step.do(`Determine image rotation needs for ${slug}`, async() => {
 			let imageUrl = uploadedImageUrl;
 			if (imageUrl.startsWith("r2://uploads/")) {
 				const parts = imageUrl.split("/");

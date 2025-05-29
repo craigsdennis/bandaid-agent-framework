@@ -2,10 +2,22 @@ import { useAgent } from "agents/react";
 import { useState } from "react";
 import type { OrchestratorState, PosterSummary } from "./agents/orchestrator";
 import Layout from "./front-end/Layout";
+import PhotoUpload from "./front-end/components/photo-upload";
+
+type UploadState = {
+  isUploading: boolean;
+  progress: string;
+  currentStep: string;
+};
 
 export default function App() {
   const [result, setResult] = useState<string>("");
   const [posters, setPosters] = useState<PosterSummary[]>([]);
+  const [uploadState, setUploadState] = useState<UploadState>({
+    isUploading: false,
+    progress: "",
+    currentStep: ""
+  });
 
   const agent = useAgent({
     agent: "orchestrator",
@@ -23,8 +35,63 @@ export default function App() {
     },
   });
 
-  const addPoster = async (formData: FormData) => {
-    await agent.call("submitPoster", [formData.get("url")])
+  const addPoster = async (url: string) => {
+    setUploadState({
+      isUploading: true,
+      progress: "0%",
+      currentStep: "Submitting poster to analysis..."
+    });
+
+    try {
+      setUploadState(prev => ({
+        ...prev,
+        progress: "25%",
+        currentStep: "Processing image..."
+      }));
+
+      await agent.call("submitPoster", [url]);
+
+      setUploadState(prev => ({
+        ...prev,
+        progress: "75%",
+        currentStep: "Analyzing bands and artists..."
+      }));
+
+      // Wait a bit for the orchestrator to process
+      setTimeout(() => {
+        setUploadState({
+          isUploading: false,
+          progress: "100%",
+          currentStep: "Complete! Check your posters below."
+        });
+        
+        // Clear success message after a few seconds
+        setTimeout(() => {
+          setUploadState({
+            isUploading: false,
+            progress: "",
+            currentStep: ""
+          });
+        }, 3000);
+      }, 2000);
+
+    } catch (error) {
+      console.error('Upload failed:', error);
+      setUploadState({
+        isUploading: false,
+        progress: "",
+        currentStep: "Upload failed. Please try again."
+      });
+      
+      // Clear error message after a few seconds
+      setTimeout(() => {
+        setUploadState({
+          isUploading: false,
+          progress: "",
+          currentStep: ""
+        });
+      }, 3000);
+    }
   };
 
   const debugOrchestratorState = (e: React.FormEvent) => {
@@ -50,41 +117,12 @@ export default function App() {
         </div>
 
         {/* Upload Section */}
-        <div className="bg-gradient-to-br from-red-600/20 via-stone-800/50 to-yellow-400/20 border-4 border-red-600 p-8 transform -rotate-1 shadow-[8px_8px_0px_rgba(0,0,0,0.8)]">
-          <div className="text-center mb-6">
-            <h2 className="text-3xl font-black uppercase text-red-400 mb-2 tracking-wide">
-              📸 Upload Your Poster
-            </h2>
-            <p className="text-stone-300 text-lg">Drop a concert poster URL and let the magic happen</p>
-          </div>
-          
-          <form action={addPoster} className="space-y-6">
-            <div className="relative">
-              <input 
-                name="url" 
-                placeholder="https://example.com/awesome-concert-poster.jpg"
-                className="w-full p-4 text-lg bg-black/60 border-4 border-stone-600 focus:border-yellow-400 focus:outline-none text-white placeholder-stone-400 font-mono transform skew-x-1 transition-all duration-300"
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                <span className="text-2xl">🖼️</span>
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <button 
-                type="submit"
-                className="bg-red-600 hover:bg-yellow-400 hover:text-black text-white font-black text-2xl uppercase tracking-wider px-12 py-4 transform -skew-x-3 shadow-[6px_6px_0px_rgba(0,0,0,0.8)] hover:shadow-[8px_8px_0px_rgba(0,0,0,0.8)] hover:-translate-y-2 transition-all duration-300 border-4 border-white"
-              >
-                🚀 Analyze This Poster!
-              </button>
-            </div>
-          </form>
-        </div>
+        <PhotoUpload onUrlSubmit={addPoster} uploadState={uploadState} />
 
         {/* Posters Gallery */}
         {posters.length > 0 && (
           <div className="space-y-6">
-            <h2 className="text-4xl font-black uppercase text-yellow-400 text-center tracking-wide border-b-4 border-yellow-400 inline-block pb-2 mx-auto block">
+            <h2 className="text-4xl font-black uppercase text-yellow-400 text-center tracking-wide border-b-4 border-yellow-400 inline-block pb-2 mx-auto">
               🎪 Your Concert Posters
             </h2>
             
