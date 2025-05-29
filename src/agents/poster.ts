@@ -7,7 +7,7 @@ import {
   type WSMessage,
 } from "agents";
 import OpenAI from "openai";
-import { zodResponseFormat } from "openai/helpers/zod.mjs";
+import { zodTextFormat } from "openai/helpers/zod.mjs";
 import { z } from "zod";
 
 const EventSchema = z.object({
@@ -18,7 +18,8 @@ const EventSchema = z.object({
     description: "The name of the city where this is happening",
   }),
   date: z.string({
-    description: "The date and time when this is happening in ISO 9601 format. Determine year based on day of the week and date if year is not provided.",
+    description:
+      "The date and time when this is happening in ISO 9601 format. Determine year based on day of the week and date if year is not provided.",
   }),
   isUpcoming: z.boolean({
     description:
@@ -71,15 +72,22 @@ export class PosterAgent extends Agent<Env, PosterState> {
   }
 
   async trackListener(spotifyUserId: string) {
-    const rows = this.sql`SELECT listen_count FROM listeners WHERE spotify_user_id=${spotifyUserId}`;
+    const rows = this
+      .sql`SELECT listen_count FROM listeners WHERE spotify_user_id=${spotifyUserId}`;
     if (rows.length === 0) {
-      this.sql`INSERT INTO listeners (spotify_user_id, listen_count) VALUES (${spotifyUserId}, 0);`;
+      this
+        .sql`INSERT INTO listeners (spotify_user_id, listen_count) VALUES (${spotifyUserId}, 0);`;
     } else {
       const currentCount = rows[0].listen_count as number;
-      this.sql`UPDATE listeners SET listen_count=${currentCount + 1} WHERE spotify_user_id=${spotifyUserId}`;
+      this.sql`UPDATE listeners SET listen_count=${
+        currentCount + 1
+      } WHERE spotify_user_id=${spotifyUserId}`;
     }
     const [row] = this.sql`SELECT SUM(listen_count) from listeners`;
-    this.setState({...this.state as PosterState, listenCount: row.listen_count as number})
+    this.setState({
+      ...(this.state as PosterState),
+      listenCount: row.listen_count as number,
+    });
   }
 
   async initialize(url: string) {
@@ -95,26 +103,30 @@ export class PosterAgent extends Agent<Env, PosterState> {
       const base64String = Buffer.from(aBuffer).toString("base64");
       imageUrl = `data:${contentType};base64,${base64String}`;
     }
-    // TODO: Change to responses API
     const oai = new OpenAI({ apiKey: this.env.OPENAI_API_KEY });
-    const completion = await oai.beta.chat.completions.parse({
-      model: "gpt-4o",
-      messages: [
+    const response = await oai.responses.parse({
+      model: "gpt-4.1",
+      input: [
         {
           role: "user",
           content: [
             {
-              type: "text",
-              text: `Extract the information from this concert poster. The current date is ${new Date()}`,
+              type: "input_text",
+              text: `Extract the information from this concert poster. The current date is ${new Date()}.`,
             },
-            { type: "image_url", image_url: { url: imageUrl } },
+            {
+              type: "input_image",
+              image_url: imageUrl,
+              detail: "auto",
+            },
           ],
         },
       ],
-      response_format: zodResponseFormat(PosterMetadataSchema, "poster"),
+      text: {
+        format: zodTextFormat(PosterMetadataSchema, "poster"),
+      }
     });
-    const posterMetadata = completion.choices[0].message
-      .parsed as PosterMetadata;
+    const posterMetadata = response.output_parsed;
     const state = { uploadedImageUrl: url, ...posterMetadata };
     this.setState(state);
   }

@@ -327,7 +327,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
           .sql`INSERT INTO watched_tracks (uri, poster_id) VALUES (${uri}, ${posterId});`
     );
     const r2Key = await posterAgent.getPosterR2Key();
-    const obj = await this.env.POSTERS.get(r2Key);
+    const obj = await this.env.POSTERS.get(r2Key as string);
     if (obj) {
       console.log(`Transforming ${r2Key}`);
       const image = await this.env.IMAGES.input(obj.body)
