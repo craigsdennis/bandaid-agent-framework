@@ -5,7 +5,7 @@ import {
   type Connection,
   type ConnectionContext,
   type WSMessage,
-  unstable_callable as callable
+  callable
 } from "agents";
 import type { PosterAgent } from "./poster";
 
@@ -165,7 +165,7 @@ export class Orchestrator extends Agent<Env, OrchestratorState> {
       .sql<string>`INSERT INTO poster_submissions (id, url) VALUES (${id}, ${url})`;
     await posterAgent.initialize(url);
     // Update poster record to the generated slug
-    const slug = (await posterAgent.getSlug()) as string;
+    const slug: string = await posterAgent.getSlug();
     this.sql`UPDATE poster_submissions SET slug=${slug} WHERE id=${id}`;
     const state = this.state as OrchestratorState;
     // TODO: How to update this? temporary refresh?

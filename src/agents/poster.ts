@@ -7,21 +7,21 @@ import {
   type WSMessage,
 } from "agents";
 import OpenAI from "openai";
-import { zodTextFormat } from "openai/helpers/zod.mjs";
 import { z } from "zod";
+import { zodTextFormat } from "openai/helpers/zod";
 
 const EventSchema = z.object({
-  venue: z.string({
+  venue: z.string().meta({
     description: "The name of the venue where the event is happening",
   }),
-  location: z.string({
+  location: z.string().meta({
     description: "The name of the city where this is happening",
   }),
-  date: z.string({
+  date: z.string().meta({
     description:
       "The date and time when this is happening in ISO 9601 format. Determine year based on day of the week and date if year is not provided.",
   }),
-  isUpcoming: z.boolean({
+  isUpcoming: z.boolean().meta({
     description:
       "Have all concert dates not yet happened, or is this from the past",
   }),
@@ -32,17 +32,71 @@ const PosterMetadataSchema = z.object({
   bandNames: z.array(z.string()),
   // There can be multiple places on a poster
   events: z.array(EventSchema),
-  tourName: z.string({
+  tourName: z.string().meta({
     description:
       'The name of the tour if it exists, otherwise use the headliner, location, and the year. Example: "Beastie Boys - New York - 1986"',
   }),
-  slug: z.string({
+  slug: z.string().meta({
     description:
       "A suggested URL safe slug for this event, based on headlining band, location, and the year",
   }),
 });
 
 export type PosterMetadata = z.infer<typeof PosterMetadataSchema>;
+
+const PosterMetadataJsonSchema = {
+  type: "object",
+  properties: {
+    bandNames: {
+      description: "A list of band names found on the poster",
+      items: { type: "string" },
+      type: "array",
+    },
+    events: {
+      description: "Details for each event listed on the poster",
+      items: {
+        additionalProperties: false,
+        properties: {
+          venue: {
+            description:
+              "The name of the venue where the event is happening",
+            type: "string",
+          },
+          location: {
+            description:
+              "The name of the city where this is happening",
+            type: "string",
+          },
+          date: {
+            description:
+              "The date and time when this is happening in ISO 9601 format. Determine year based on day of the week and date if year is not provided.",
+            type: "string",
+          },
+          isUpcoming: {
+            description:
+              "Have all concert dates not yet happened, or is this from the past",
+            type: "boolean",
+          },
+        },
+        required: ["venue", "location", "date", "isUpcoming"],
+        type: "object",
+      },
+      type: "array",
+    },
+    tourName: {
+      description:
+        'The name of the tour if it exists, otherwise use the headliner, location, and the year. Example: "Beastie Boys - New York - 1986"',
+      type: "string",
+    },
+    slug: {
+      description:
+        "A suggested URL safe slug for this event, based on headlining band, location, and the year",
+      type: "string",
+    },
+  },
+  required: ["bandNames", "events", "tourName", "slug"],
+  additionalProperties: false,
+} as const;
 
 export type SpotifyArtistSummary = {
   name: string;
@@ -104,8 +158,10 @@ export class PosterAgent extends Agent<Env, PosterState> {
       imageUrl = `data:${contentType};base64,${base64String}`;
     }
     const oai = new OpenAI({ apiKey: this.env.OPENAI_API_KEY });
+    const posterTextFormat = zodTextFormat(PosterMetadataSchema, "poster");
+    posterTextFormat.schema = PosterMetadataJsonSchema;
     const response = await oai.responses.parse({
-      model: "gpt-4.1",
+      model: "gpt-5",
       input: [
         {
           role: "user",
@@ -123,12 +179,15 @@ export class PosterAgent extends Agent<Env, PosterState> {
         },
       ],
       text: {
-        format: zodTextFormat(PosterMetadataSchema, "poster"),
-      }
+        format: posterTextFormat,
+      },
     });
     const posterMetadata = response.output_parsed;
-    const state = { uploadedImageUrl: url, ...posterMetadata };
-    this.setState(state);
+    const stateOverrides = { uploadedImageUrl: url, ...posterMetadata };
+    this.setState({
+      ...this.state,
+      ...stateOverrides,
+    });
   }
 
   async onStateUpdate(

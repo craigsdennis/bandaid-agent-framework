@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import Layout from "../Layout";
 
 export default function User({ id }: {id: string}) {
-  const [spotifyUser, setSpotifyUser] = useState<SpotifyUserState>({});
+  const [spotifyUser, setSpotifyUser] = useState<SpotifyUserState>();
   
   const agent = useAgent({
     agent: "spotify-user-agent",

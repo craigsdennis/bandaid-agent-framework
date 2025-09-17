@@ -4,7 +4,7 @@ import {
   type Connection,
   type WSMessage,
   type AgentContext,
-  unstable_callable as callable,
+  callable,
 } from "agents";
 import {
   type AccessToken,
@@ -129,7 +129,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
   async getCurrentToken(): Promise<AccessToken> {
     const rows = this
       .sql`SELECT token_json FROM tokens ORDER BY created_at DESC LIMIT 1;`;
-    const tokenJSON = rows[0].token_json;
+    const tokenJSON = rows[0].token_json as string;
     return JSON.parse(tokenJSON);
   }
 
@@ -189,7 +189,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
   }
 
   async scheduleNextListenCheck(override = false) {
-    const callbackString = "runRecentPlaylistListenChecks";
+    const callbackString = "runRecentPlaylistListensCheck";
     let schedule = this.getSchedules().find(
       (sched) => sched.callback === callbackString
     );
@@ -213,21 +213,21 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
     const [latestRun, penultimateRun] = latestRuns;
     if (penultimateRun) {
       let checkInterval =
-        new Date(latestRun.run_completed_at).getTime() -
-        new Date(penultimateRun.run_completed_at).getTime();
+        new Date(latestRun.run_completed_at as string).getTime() -
+        new Date(penultimateRun.run_completed_at as string).getTime();
       console.log("Latest check interval was", checkInterval);
       // If we are getting close to not having enough time
-      if (latestRun.total_recent >= 40) {
+      if (latestRun.total_recent as number >= 40) {
         // Half it
         checkInterval = checkInterval * 0.5;
-      } else if (latestRun.total_recent < 20) {
+      } else if (latestRun.total_recent as number < 20) {
         // Wait a little longer
         checkInterval = Math.max(MAX_INTERVAL, checkInterval * 1.25);
       }
       // If 50% of listens are to watched bands, they are big users of the app, refresh more frequently.
       if (
-        latestRun.total_matches_found /
-          latestRun.total_watched_at_time_of_check >=
+        latestRun.total_matches_found as number /
+          latestRun.total_watched_at_time_of_check as number >=
         0.5
       ) {
         checkInterval = checkInterval * 0.5;
@@ -238,7 +238,7 @@ export class SpotifyUserAgent extends Agent<Env, SpotifyUserState> {
       console.log("Adaptive schedule", now, checkInterval, scheduleDate);
     }
     if (scheduleDate) {
-      schedule = await this.schedule(scheduleDate, callbackString, {});
+      await this.schedule(scheduleDate, callbackString, {});
     } else {
       console.warn("Schedule not set");
     }

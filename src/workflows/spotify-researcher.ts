@@ -65,11 +65,13 @@ export class SpotifyResearcher extends WorkflowEntrypoint<
           const fullDescription = await step.do(
             `Gather description from Spotify Web Page for ${summary.name}`,
             async () => {
+              console.log(`Starting to look at Spotify page ${summary.spotify_url}`);
               const page = await browser.newPage();
               await page.goto(summary.spotify_url);
               await page.waitForNetworkIdle();
               // Dynamic class names find the last text after <h2>About</h2>
               const handles = await page.$$("h2");
+              console.log(`Found ${handles.length} h2's`);
               let description;
               for (const handle of handles) {
                 const headingText = await handle.evaluate((el) => el.innerText);

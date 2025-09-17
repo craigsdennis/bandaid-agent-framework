@@ -6,7 +6,7 @@ import {
   WorkflowStep,
 } from "cloudflare:workers";
 
-import { zodResponseFormat, zodTextFormat } from "openai/helpers/zod.mjs";
+import { zodTextFormat } from "openai/helpers/zod.mjs";
 import { z } from "zod";
 import OpenAI from "openai";
 import { getAgentByName } from "agents";
@@ -42,6 +42,26 @@ const RotationInstructionsSchema = z.object({
 });
 type RotationInstructions = z.infer<typeof RotationInstructionsSchema>;
 
+const RotationInstructionsJsonSchema = {
+  additionalProperties: false,
+  properties: {
+    currentAssumedClockwiseRotation: {
+      description:
+        "If the photo is not in it's intended position, determine what clockwise rotation was made previously to get it into it's current state. Use the text in the image to help determine the rotation. Take your time to think carefully.",
+      enum: ["0", "90", "180", "270"],
+      type: "string",
+    },
+    degreesToRotate: {
+      description:
+        "The amount of degrees of clockwise rotation needed to make the photo upright. Ensure the image is not upside down, the text should be right side up. Take your time in ensuring the poster is not upside down.",
+      enum: ["0", "90", "180", "270"],
+      type: "string",
+    },
+  },
+  required: ["currentAssumedClockwiseRotation", "degreesToRotate"],
+  type: "object",
+} as const;
+
 export class ImageNormalizer extends WorkflowEntrypoint<Env, NormalizerParams> {
   async run(
     event: Readonly<WorkflowEvent<NormalizerParams>>,
@@ -71,8 +91,13 @@ export class ImageNormalizer extends WorkflowEntrypoint<Env, NormalizerParams> {
           imageUrl = `data:${contentType};base64,${base64String}`;
         }
         const oai = new OpenAI({ apiKey: this.env.OPENAI_API_KEY });
+        const rotationTextFormat = zodTextFormat(
+          RotationInstructionsSchema,
+          "rotationInstructions"
+        );
+        rotationTextFormat.schema = RotationInstructionsJsonSchema;
         const response = await oai.responses.parse({
-          model: "gpt-4.1",
+          model: "gpt-5",
           input: [
             {
               role: "user",
@@ -91,10 +116,7 @@ export class ImageNormalizer extends WorkflowEntrypoint<Env, NormalizerParams> {
           ],
 
           text: {
-            format: zodTextFormat(
-              RotationInstructionsSchema,
-              "rotationInstructions"
-            ),
+            format: rotationTextFormat,
           },
         });
         const rotationInstructions = response.output_parsed;
